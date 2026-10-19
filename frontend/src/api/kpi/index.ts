@@ -1,6 +1,6 @@
 import type { AxiosPromise } from '@/utils/api-types';
 import request from '@/utils/request';
-import type { AssessmentCycleVO, ApprovalTaskVO, EvidenceAttachmentInput, EvidenceAttachmentVO, EvidenceRegisterInput, EvidenceRegisterVO, EvidenceUploadVO, IndicatorVersionInput, IndicatorVersionSummary, KpiActorVO, OrganizationUnitVO, RankedResultVO, ScorePreviewRequest, ScorePreviewVO, SubmissionVO } from './types';
+import type { AssessmentCycleVO, ApprovalTaskVO, EvidenceAttachmentInput, EvidenceAttachmentVO, EvidenceRegisterInput, EvidenceRegisterVO, EvidenceUploadVO, IndicatorItemInput, IndicatorVersionInput, IndicatorVersionSummary, KpiActorVO, OrganizationUnitVO, RankedResultVO, ScorePreviewRequest, ScorePreviewVO, SubmissionVO } from './types';
 
 export const listCycles = (): AxiosPromise<AssessmentCycleVO[]> => request({ url: '/kpi/cycles', method: 'get' });
 export const getCurrentKpiActor = (): AxiosPromise<KpiActorVO> => request({ url: '/kpi/me', method: 'get' });
@@ -13,7 +13,11 @@ export const bindCycleScheme = (code: string, data: { category: string; schemeCo
 export const validateCycleSchemes = (code: string): AxiosPromise<string[]> => request({ url: `/kpi/cycles/${code}/schemes/validate`, method: 'post' });
 export const listOrganizationUnits = (cycleCode: string): AxiosPromise<OrganizationUnitVO[]> => request({ url: '/kpi/units', method: 'get', params: { cycleCode } });
 export const getIndicatorVersion = (version: string): AxiosPromise<IndicatorVersionInput> => request({ url: `/kpi/indicator-versions/${version}`, method: 'get' });
+export const getIndicatorVersionItems = (version: string): AxiosPromise<IndicatorItemInput[]> => request({ url: `/kpi/indicator-versions/${version}/items`, method: 'get' });
 export const listIndicatorVersions = (): AxiosPromise<IndicatorVersionSummary[]> => request({ url: '/kpi/indicator-versions', method: 'get' });
+export const saveIndicatorDraft = (data: IndicatorVersionInput) => request({ url: '/kpi/indicator-versions/draft', method: 'post', data });
+export const deleteIndicatorDraft = (version: string) => request({ url: `/kpi/indicator-versions/${version}/draft`, method: 'delete' });
+export const publishIndicatorDraft = (version: string) => request({ url: `/kpi/indicator-versions/${version}/publish`, method: 'post' });
 export interface PerformanceSchemeVO { code: string; name: string; category: string; status: string; formulaVersion: string; indicatorVersion: string; }
 export const listPerformanceSchemes = (): AxiosPromise<PerformanceSchemeVO[]> => request({ url: '/kpi/schemes', method: 'get' });
 export const createPerformanceScheme = (data: { code: string; name: string; category: string; indicatorVersion: string }) => request({ url: '/kpi/schemes', method: 'post', data });

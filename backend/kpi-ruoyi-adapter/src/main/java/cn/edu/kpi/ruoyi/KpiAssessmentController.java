@@ -155,11 +155,23 @@ public final class KpiAssessmentController {
         return R.ok(new IndicatorVersionView(published.version(), "weighted-score-v1", 4, published.indicators()));
     }
 
+    @GetMapping("/indicator-versions/{version}/items")
+    public R<List<IndicatorVersion.Indicator>> indicatorVersionItems(@PathVariable String version) { current.requireCurrent(); return R.ok(indicatorRepository.items(version)); }
+
     @GetMapping("/indicator-versions")
     public R<List<JdbcIndicatorVersionRepository.VersionSummary>> indicatorVersions() {
         current.requireCurrent();
         return R.ok(indicatorRepository.listVersions());
     }
+
+    @PostMapping("/indicator-versions/draft")
+    public R<Void> saveIndicatorDraft(@RequestBody IndicatorVersionInput input) { current.requireCurrent(); indicatorRepository.saveDraft(new IndicatorVersion(input.version(), input.indicators()), input.formulaVersion(), input.scoreScale()); return R.ok(); }
+
+    @DeleteMapping("/indicator-versions/{version}/draft")
+    public R<Void> deleteIndicatorDraft(@PathVariable String version) { current.requireCurrent(); indicatorRepository.deleteDraft(version); return R.ok(); }
+
+    @PostMapping("/indicator-versions/{version}/publish")
+    public R<Void> publishIndicatorDraft(@PathVariable String version) { current.requireCurrent(); indicatorRepository.publishDraft(version, java.time.Instant.now()); return R.ok(); }
 
     @GetMapping("/schemes")
     public R<List<JdbcPerformanceSchemeRepository.Scheme>> schemes() { current.requireCurrent(); return R.ok(schemeRepository.list()); }

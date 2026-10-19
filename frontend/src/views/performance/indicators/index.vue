@@ -10,6 +10,7 @@
           <el-radio-button v-for="item in versions" :key="item.version" :value="item.version">{{ item.version }} · {{ item.status }}</el-radio-button>
         </el-radio-group>
       </div>
+      <div v-if="selectedSummary?.status === 'DRAFT'" class="version-actions"><el-button type="primary" @click="openEdit">编辑草稿</el-button><el-button type="success" @click="publishDraftVersion">发布草稿</el-button><el-button type="danger" @click="removeDraft">删除草稿</el-button></div>
       <el-table v-if="version" :data="version.indicators" border class="mt-4">
         <el-table-column prop="code" label="指标编码" width="180" />
         <el-table-column prop="name" label="指标名称" min-width="220" />
@@ -37,20 +38,21 @@
           </div>
         </el-form-item>
       </el-form>
-      <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="publish">发布</el-button></template>
+      <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="saveDraft">保存草稿</el-button></template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { getIndicatorVersion, listIndicatorVersions, publishIndicatorVersion } from '@/api/kpi';
+import { deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
 import type { IndicatorVersionInput, IndicatorVersionSummary } from '@/api/kpi/types';
 
 const version = ref<IndicatorVersionInput>();
 const versions = ref<IndicatorVersionSummary[]>([]);
 const selectedVersion = ref('2026-v1');
+const selectedSummary = computed(() => versions.value.find(item => item.version === selectedVersion.value));
 const dialogVisible = ref(false);
 const saving = ref(false);
 const form = reactive<IndicatorVersionInput>({ version: '', formulaVersion: 'weighted-score-v1', scoreScale: 4, indicators: [] });
@@ -59,21 +61,22 @@ async function load() {
   try {
     versions.value = (await listIndicatorVersions()).data || [];
     if (versions.value.length && !versions.value.some(item => item.version === selectedVersion.value)) selectedVersion.value = versions.value[0].version;
-    version.value = (await getIndicatorVersion(selectedVersion.value)).data;
+    await selectVersion(selectedVersion.value);
   } catch { version.value = undefined; }
 }
-async function selectVersion(code: string) { selectedVersion.value = code; version.value = (await getIndicatorVersion(code)).data; }
+async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); version.value = summary?.status === 'DRAFT' ? { version: code, formulaVersion: summary.formulaVersion, scoreScale: summary.scoreScale, indicators: (await getIndicatorVersionItems(code)).data || [] } : (await getIndicatorVersion(code)).data; }
 function openCreate() { form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = [{ code: '', name: '', weight: 0, maximumScore: 100 }]; dialogVisible.value = true; }
-async function publish() {
+function openEdit() { if (!version.value) return; form.version = version.value.version; form.formulaVersion = version.value.formulaVersion; form.scoreScale = version.value.scoreScale; form.indicators = version.value.indicators.map(item => ({ ...item })); dialogVisible.value = true; }
+async function saveDraft() {
   if (!form.version || !form.indicators.length || form.indicators.some(item => !item.code || !item.name || item.weight <= 0)) { ElMessage.warning('请完整填写版本和指标项'); return; }
-  const weight = form.indicators.reduce((sum, item) => sum + Number(item.weight), 0);
-  if (Math.abs(weight - 100) > 0.01) { ElMessage.warning('指标权重合计必须为 100%'); return; }
   saving.value = true;
-  try { await publishIndicatorVersion(form); ElMessage.success('指标版本发布成功'); dialogVisible.value = false; await load(); } finally { saving.value = false; }
+  try { await saveIndicatorDraft(form); ElMessage.success('指标草稿已保存'); dialogVisible.value = false; await load(); } finally { saving.value = false; }
 }
+async function publishDraftVersion() { await publishIndicatorDraft(selectedVersion.value); ElMessage.success('指标版本发布成功'); await load(); }
+async function removeDraft() { await deleteIndicatorDraft(selectedVersion.value); ElMessage.success('指标草稿已删除'); await load(); }
 onMounted(load);
 </script>
 
 <style scoped>
-.toolbar{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:600}.version-tabs{margin-top:16px}.mt-4{margin-top:16px}.items{width:100%}.item-row{display:grid;grid-template-columns:1fr 1.5fr 120px 120px auto;gap:8px;margin-bottom:8px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:600}.version-tabs{margin-top:16px}.version-actions{margin-top:16px}.mt-4{margin-top:16px}.items{width:100%}.item-row{display:grid;grid-template-columns:1fr 1.5fr 120px 120px auto;gap:8px;margin-bottom:8px}
 </style>
