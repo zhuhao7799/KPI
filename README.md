@@ -13,6 +13,7 @@
 - 数据库：MySQL 8、Flyway 风格的版本化迁移，见 `backend/kpi-storage/migrations/`；
 - 基础设施：本地 MySQL 8 与 Redis 7，见 `deploy/compose.yaml`。
 - RuoYi 基础框架启动：Linux/Git Bash 使用 `backend/run-ruoyi.sh`，Windows PowerShell 使用 `backend/run-ruoyi.ps1`。
+- 不使用 Docker 时，先安装 MySQL 8 和 Redis 7/Memurai，再执行 `deploy/windows/init-local-mysql.ps1` 初始化数据库。
 - RuoYi 适配层：`backend/kpi-ruoyi-adapter/` 已提供周期、填报、材料、待办、结果和授权接口；集成补丁见 `backend/ruoyi-integration.patch`。
 
 绩效内核已固定并验证以下规则：
