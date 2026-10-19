@@ -28,8 +28,8 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
     public record Reference(String type, String code, String status) { }
 
     public java.util.List<IndicatorVersion.Indicator> items(String versionCode) {
-        var sql = "select i.indicator_code,i.indicator_name,i.weight,i.maximum_score from indicator_item_snapshot i join indicator_version v on v.id=i.indicator_version_id where v.version_code=? order by i.sort_order";
-        try (var c=dataSource.getConnection(); var s=c.prepareStatement(sql)) { s.setString(1, versionCode); try (var r=s.executeQuery()) { var out=new java.util.ArrayList<IndicatorVersion.Indicator>(); while(r.next()) out.add(new IndicatorVersion.Indicator(r.getString(1),r.getString(2),r.getBigDecimal(3),r.getBigDecimal(4))); return java.util.List.copyOf(out); } }
+        var sql = "select i.indicator_code,i.indicator_name,i.weight,i.maximum_score,i.indicator_category,i.indicator_type,i.measurement_unit,i.scoring_method,i.evidence_required,i.description from indicator_item_snapshot i join indicator_version v on v.id=i.indicator_version_id where v.version_code=? order by i.sort_order";
+        try (var c=dataSource.getConnection(); var s=c.prepareStatement(sql)) { s.setString(1, versionCode); try (var r=s.executeQuery()) { var out=new java.util.ArrayList<IndicatorVersion.Indicator>(); while(r.next()) out.add(new IndicatorVersion.Indicator(r.getString(1),r.getString(2),r.getBigDecimal(3),r.getBigDecimal(4),r.getString(5),r.getString(6),r.getString(7),r.getString(8),r.getBoolean(9),r.getString(10))); return java.util.List.copyOf(out); } }
         catch (SQLException e) { throw new IllegalStateException("cannot read indicator version", e); }
     }
 
@@ -38,7 +38,7 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
             c.setAutoCommit(false);
             String id;
             try (var q=c.prepareStatement("select id,status from indicator_version where version_code=? for update")) { q.setString(1,version.version()); try(var r=q.executeQuery()) { if(r.next()) { if("PUBLISHED".equals(r.getString(2))) throw new IllegalStateException("published indicator version is immutable"); id=r.getString(1); assertNotLocked(c,id); try(var u=c.prepareStatement("update indicator_version set version_name=?,formula_version=?,score_scale=? where id=?")){u.setString(1,version.version());u.setString(2,formulaVersion);u.setInt(3,scoreScale);u.setString(4,id);u.executeUpdate();} try(var d=c.prepareStatement("delete from indicator_item_snapshot where indicator_version_id=?")){d.setString(1,id);d.executeUpdate();} } else { id=java.util.UUID.randomUUID().toString(); try(var h=c.prepareStatement("insert into indicator_version(id,version_code,version_name,status,formula_version,score_scale) values(?,?,?,'DRAFT',?,?)")){h.setString(1,id);h.setString(2,version.version());h.setString(3,version.version());h.setString(4,formulaVersion);h.setInt(5,scoreScale);h.executeUpdate();} } } }
-            try (var i=c.prepareStatement("insert into indicator_item_snapshot(id,indicator_version_id,indicator_code,indicator_name,weight,maximum_score,sort_order) values(uuid(),?,?,?,?,?,?)")) { int n=1; for(var item:version.indicators()){i.setString(1,id);i.setString(2,item.code());i.setString(3,item.name());i.setBigDecimal(4,item.weight());i.setBigDecimal(5,item.maximumScore());i.setInt(6,n++);i.addBatch();} i.executeBatch(); }
+            try (var i=c.prepareStatement("insert into indicator_item_snapshot(id,indicator_version_id,indicator_code,indicator_name,weight,maximum_score,sort_order,indicator_category,indicator_type,measurement_unit,scoring_method,evidence_required,description) values(uuid(),?,?,?,?,?,?,?,?,?,?,?,?)")) { int n=1; for(var item:version.indicators()){i.setString(1,id);i.setString(2,item.code());i.setString(3,item.name());i.setBigDecimal(4,item.weight());i.setBigDecimal(5,item.maximumScore());i.setInt(6,n++);i.setString(7,item.category());i.setString(8,item.indicatorType());i.setString(9,item.measurementUnit());i.setString(10,item.scoringMethod());i.setBoolean(11,item.evidenceRequired());i.setString(12,item.description());i.addBatch();} i.executeBatch(); }
             c.commit();
         } catch (SQLException e) { throw new IllegalStateException("cannot save indicator draft",e); }
     }
@@ -53,7 +53,7 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
             try (var q=c.prepareStatement("select id,formula_version,score_scale,status from indicator_version where version_code=?")) { q.setString(1,sourceVersion); try(var r=q.executeQuery()){ if(!r.next()) throw new IllegalArgumentException("source indicator version not found"); if(!"PUBLISHED".equals(r.getString(4))) throw new IllegalStateException("only published versions can be cloned"); sourceId=r.getString(1); formula=r.getString(2); scale=r.getInt(3); } }
             String targetId=java.util.UUID.randomUUID().toString();
             try(var h=c.prepareStatement("insert into indicator_version(id,version_code,version_name,status,formula_version,score_scale) values(?,?,?,'DRAFT',?,?)")){h.setString(1,targetId);h.setString(2,targetVersion);h.setString(3,targetVersion);h.setString(4,formula);h.setInt(5,scale);h.executeUpdate();}
-            try(var i=c.prepareStatement("insert into indicator_item_snapshot(id,indicator_version_id,indicator_code,indicator_name,weight,maximum_score,sort_order) select uuid(),?,indicator_code,indicator_name,weight,maximum_score,sort_order from indicator_item_snapshot where indicator_version_id=?")){i.setString(1,targetId);i.setString(2,sourceId);i.executeUpdate();}
+            try(var i=c.prepareStatement("insert into indicator_item_snapshot(id,indicator_version_id,indicator_code,indicator_name,weight,maximum_score,sort_order,indicator_category,indicator_type,measurement_unit,scoring_method,evidence_required,description) select uuid(),?,indicator_code,indicator_name,weight,maximum_score,sort_order,indicator_category,indicator_type,measurement_unit,scoring_method,evidence_required,description from indicator_item_snapshot where indicator_version_id=?")){i.setString(1,targetId);i.setString(2,sourceId);i.executeUpdate();}
             c.commit();
         } catch(SQLException e) { throw new IllegalStateException("cannot clone indicator version",e); }
     }
@@ -73,9 +73,9 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
             try (var rows = statement.executeQuery()) {
                 if (!rows.next()) return Optional.empty();
                 var id = rows.getString("id"); var items = new ArrayList<IndicatorVersion.Indicator>();
-                try (var itemStatement = connection.prepareStatement("select indicator_code, indicator_name, weight, maximum_score from indicator_item_snapshot where indicator_version_id = ? order by sort_order")) {
+                try (var itemStatement = connection.prepareStatement("select indicator_code, indicator_name, weight, maximum_score,indicator_category,indicator_type,measurement_unit,scoring_method,evidence_required,description from indicator_item_snapshot where indicator_version_id = ? order by sort_order")) {
                     itemStatement.setString(1, id);
-                    try (var itemRows = itemStatement.executeQuery()) { while (itemRows.next()) items.add(new IndicatorVersion.Indicator(itemRows.getString(1), itemRows.getString(2), itemRows.getBigDecimal(3), itemRows.getBigDecimal(4))); }
+                    try (var itemRows = itemStatement.executeQuery()) { while (itemRows.next()) items.add(new IndicatorVersion.Indicator(itemRows.getString(1), itemRows.getString(2), itemRows.getBigDecimal(3), itemRows.getBigDecimal(4),itemRows.getString(5),itemRows.getString(6),itemRows.getString(7),itemRows.getString(8),itemRows.getBoolean(9),itemRows.getString(10))); }
                 }
                 return Optional.of(new IndicatorVersion(rows.getString("version_code"), items));
             }
@@ -91,8 +91,8 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
                     header.setString(1, version.version()); header.setString(2, version.version()); header.setString(3, formulaVersion); header.setInt(4, scoreScale); header.setObject(5, publishedAt); header.executeUpdate();
                 }
                 try (var find = connection.prepareStatement("select id from indicator_version where version_code = ?")) { find.setString(1, version.version()); try (var rows = find.executeQuery()) { rows.next(); id = rows.getString(1); } }
-                try (var item = connection.prepareStatement("insert into indicator_item_snapshot (id, indicator_version_id, indicator_code, indicator_name, weight, maximum_score, sort_order) values (uuid(), ?, ?, ?, ?, ?, ?)")) {
-                    int order = 1; for (var indicator : version.indicators()) { item.setString(1, id); item.setString(2, indicator.code()); item.setString(3, indicator.name()); item.setBigDecimal(4, indicator.weight()); item.setBigDecimal(5, indicator.maximumScore()); item.setInt(6, order++); item.addBatch(); } item.executeBatch();
+                try (var item = connection.prepareStatement("insert into indicator_item_snapshot (id, indicator_version_id, indicator_code, indicator_name, weight, maximum_score, sort_order,indicator_category,indicator_type,measurement_unit,scoring_method,evidence_required,description) values (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                    int order = 1; for (var indicator : version.indicators()) { item.setString(1, id); item.setString(2, indicator.code()); item.setString(3, indicator.name()); item.setBigDecimal(4, indicator.weight()); item.setBigDecimal(5, indicator.maximumScore()); item.setInt(6, order++); item.setString(7,indicator.category()); item.setString(8,indicator.indicatorType()); item.setString(9,indicator.measurementUnit()); item.setString(10,indicator.scoringMethod()); item.setBoolean(11,indicator.evidenceRequired()); item.setString(12,indicator.description()); item.addBatch(); } item.executeBatch();
                 }
                 connection.commit();
             } catch (Exception error) { connection.rollback(); throw error; }

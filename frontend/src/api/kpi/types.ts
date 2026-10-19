@@ -1,7 +1,7 @@
 export interface AssessmentCycleVO { code: string; name: string; startsOn: string; endsOn: string; state: 'DRAFT' | 'ACTIVE' | 'LOCKED' | 'ARCHIVED'; }
 export interface KpiActorVO { userId: string; roles: Array<'SCHOOL_ADMIN' | 'ASSESSMENT_OFFICE' | 'UNIT_EDITOR' | 'REVIEWER' | 'EVALUATOR' | 'RESULT_VIEWER'>; }
 export interface OrganizationUnitVO { id: string; name: string; category: string; parentId?: string; }
-export interface IndicatorItemInput { code: string; name: string; weight: number; maximumScore: number; }
+export interface IndicatorItemInput { code: string; name: string; weight: number; maximumScore: number; category: string; indicatorType: string; measurementUnit: string; scoringMethod: string; evidenceRequired: boolean; description: string; }
 export interface IndicatorVersionInput { version: string; formulaVersion: string; scoreScale: number; indicators: IndicatorItemInput[]; }
 export interface IndicatorVersionSummary { version: string; name: string; status: string; formulaVersion: string; scoreScale: number; publishedAt?: string; }
 export interface ScoreInput { indicatorCode: string; rawScore: number; evidenceIds: string[]; }

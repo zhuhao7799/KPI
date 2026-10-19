@@ -17,6 +17,9 @@
       <el-table v-if="version" :data="version.indicators" border class="mt-4">
         <el-table-column prop="code" label="指标编码" width="180" />
         <el-table-column prop="name" label="指标名称" min-width="220" />
+        <el-table-column prop="category" label="指标分类" width="140" />
+        <el-table-column prop="indicatorType" label="指标性质" width="110" />
+        <el-table-column prop="measurementUnit" label="单位" width="90" />
         <el-table-column prop="weight" label="权重" width="120"><template #default="{ row }">{{ row.weight }}%</template></el-table-column>
         <el-table-column prop="maximumScore" label="满分" width="120" />
       </el-table>
@@ -33,11 +36,16 @@
             <div v-for="(item, index) in form.indicators" :key="index" class="item-row">
               <el-input v-model="item.code" placeholder="编码" />
               <el-input v-model="item.name" placeholder="名称" />
+              <el-select v-model="item.category" placeholder="分类"><el-option label="教学建设" value="教学建设" /><el-option label="科研创新" value="科研创新" /><el-option label="人才队伍" value="人才队伍" /><el-option label="学生发展" value="学生发展" /><el-option label="社会服务" value="社会服务" /><el-option label="综合管理" value="综合管理" /></el-select>
+              <el-select v-model="item.indicatorType" placeholder="性质"><el-option label="定量" value="定量" /><el-option label="定性" value="定性" /><el-option label="加分项" value="加分项" /><el-option label="扣分项" value="扣分项" /><el-option label="否决项" value="否决项" /></el-select>
+              <el-input v-model="item.measurementUnit" placeholder="单位" />
               <el-input-number v-model="item.weight" :min="0.01" :max="100" :precision="2" />
               <el-input-number v-model="item.maximumScore" :min="1" :precision="2" />
+              <el-select v-model="item.scoringMethod" placeholder="评分方式"><el-option label="加权评分" value="加权评分" /><el-option label="区间评分" value="区间评分" /><el-option label="等级评分" value="等级评分" /><el-option label="人工评价" value="人工评价" /></el-select>
+              <el-checkbox v-model="item.evidenceRequired">需材料</el-checkbox>
               <el-button text type="danger" @click="form.indicators.splice(index, 1)">删除</el-button>
             </div>
-            <el-button plain @click="form.indicators.push({ code: '', name: '', weight: 0, maximumScore: 100 })">新增指标</el-button>
+            <el-button plain @click="form.indicators.push({ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' })">新增指标</el-button>
           </div>
         </el-form-item>
       </el-form>
@@ -69,7 +77,7 @@ async function load() {
   } catch { version.value = undefined; }
 }
 async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); references.value = (await listIndicatorReferences(code)).data || []; version.value = summary?.status === 'DRAFT' ? { version: code, formulaVersion: summary.formulaVersion, scoreScale: summary.scoreScale, indicators: (await getIndicatorVersionItems(code)).data || [] } : (await getIndicatorVersion(code)).data; }
-function openCreate() { form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = [{ code: '', name: '', weight: 0, maximumScore: 100 }]; dialogVisible.value = true; }
+function openCreate() { form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = [{ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' }]; dialogVisible.value = true; }
 function openEdit() { if (!version.value) return; form.version = version.value.version; form.formulaVersion = version.value.formulaVersion; form.scoreScale = version.value.scoreScale; form.indicators = version.value.indicators.map(item => ({ ...item })); dialogVisible.value = true; }
 async function saveDraft() {
   if (!form.version || !form.indicators.length || form.indicators.some(item => !item.code || !item.name || item.weight <= 0)) { ElMessage.warning('请完整填写版本和指标项'); return; }
