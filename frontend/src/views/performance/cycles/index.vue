@@ -8,7 +8,7 @@
         <el-table-column prop="startsOn" label="开始日期" width="140" />
         <el-table-column prop="endsOn" label="结束日期" width="140" />
         <el-table-column prop="state" label="状态" width="120" />
-        <el-table-column label="操作" width="220"><template #default="{ row }"><el-button link type="primary" @click="configure(row.code)">方案绑定</el-button><el-button v-if="row.state !== 'LOCKED'" link type="primary" @click="lock(row.code)">锁定周期</el-button></template></el-table-column>
+        <el-table-column label="操作" width="280"><template #default="{ row }"><el-button link type="primary" @click="configure(row.code)">方案绑定</el-button><el-button link type="warning" @click="validate(row.code)">配置校验</el-button><el-button v-if="row.state !== 'LOCKED'" link type="primary" @click="lock(row.code)">锁定周期</el-button></template></el-table-column>
       </el-table>
     </el-card>
     <el-dialog v-model="dialog" title="新增考核周期" width="520px">
@@ -24,7 +24,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { bindCycleScheme, createCycle, listCycleSchemes, listCycles, lockCycle, type CycleSchemeVO } from '@/api/kpi';
+import { bindCycleScheme, createCycle, listCycleSchemes, listCycles, lockCycle, validateCycleSchemes, type CycleSchemeVO } from '@/api/kpi';
 import type { AssessmentCycleVO } from '@/api/kpi/types';
 const cycles = ref<AssessmentCycleVO[]>([]); const dialog = ref(false); const form = reactive<AssessmentCycleVO>({ code: '', name: '', startsOn: '', endsOn: '', state: 'DRAFT' });
 const schemeDialog = ref(false); const activeCycle = ref(''); const bindings = ref<CycleSchemeVO[]>([]); const binding = reactive({ category: '二级学院', schemeCode: '', indicatorVersion: '2026-v1' });
@@ -33,6 +33,7 @@ async function save() { await createCycle(form); ElMessage.success('周期创建
 async function lock(code: string) { await lockCycle(code); ElMessage.success('周期已锁定'); await load(); }
 async function configure(code: string) { activeCycle.value = code; bindings.value = (await listCycleSchemes(code)).data || []; schemeDialog.value = true; }
 async function bind() { await bindCycleScheme(activeCycle.value, binding); ElMessage.success('方案绑定成功'); bindings.value = (await listCycleSchemes(activeCycle.value)).data || []; }
+async function validate(code: string) { const errors = (await validateCycleSchemes(code)).data || []; if (errors.length) ElMessage.warning(errors.join('；')); else ElMessage.success('周期配置完整，可以发布'); }
 onMounted(load);
 </script>
 <style scoped>.toolbar{display:flex;justify-content:space-between;align-items:center;font-size:18px;font-weight:600}</style>
