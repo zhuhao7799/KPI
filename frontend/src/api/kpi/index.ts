@@ -13,6 +13,7 @@ export const publishIndicatorVersion = (data: IndicatorVersionInput) => request(
 export const previewScore = (data: ScorePreviewRequest): AxiosPromise<ScorePreviewVO> => request({ url: '/kpi/submissions/preview', method: 'post', data });
 export const saveSubmission = (data: ScorePreviewRequest): AxiosPromise<SubmissionVO> => request({ url: '/kpi/submissions', method: 'post', data });
 export const transitionSubmission = (submissionId: string, target: string, comment?: string) => request({ url: `/kpi/submissions/${submissionId}/transitions`, method: 'post', data: { target, comment } });
+export const archiveSubmission = (submissionId: string) => transitionSubmission(submissionId, 'ARCHIVED', '结果归档');
 export const registerEvidence = (data: EvidenceRegisterInput): AxiosPromise<EvidenceRegisterVO> => request({ url: '/kpi/evidence', method: 'post', data });
 export const attachEvidence = (evidenceId: string, data: EvidenceAttachmentInput): AxiosPromise<EvidenceAttachmentVO> => request({ url: `/kpi/evidence/${evidenceId}/attachments`, method: 'post', data });
 export const uploadSubmissionEvidence = (submissionId: string, indicatorCode: string, file: File): AxiosPromise<EvidenceUploadVO> => {

@@ -53,6 +53,18 @@ public final class SubmissionStore {
         write(submissions, updated);
         if (returned) createReviewTask(submissionId);
     }
+    public synchronized void archive(String submissionId) {
+        var current = read(submissions, "cannot read assessment submissions");
+        var updated = new java.util.ArrayList<String>(); boolean found = false; boolean confirmed = false;
+        for (String submission : current) {
+            if (!hasId(submission, submissionId)) { updated.add(submission); continue; }
+            found = true; confirmed = submission.contains("\"state\":\"CONFIRMED\"");
+            updated.add(confirmed ? submission.replace("\"state\":\"CONFIRMED\"", "\"state\":\"ARCHIVED\"") : submission);
+        }
+        if (!found) throw new IllegalArgumentException("unknown submission: " + submissionId);
+        if (!confirmed) throw new IllegalStateException("only confirmed submissions can be archived");
+        write(submissions, updated);
+    }
     public synchronized List<String> listTasks() { return read(tasks, "cannot read approval tasks"); }
     public synchronized String completeReviewTask(String taskId, boolean approved, String comment) {
         var currentTasks = read(tasks, "cannot read approval tasks");

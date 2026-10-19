@@ -96,9 +96,9 @@ public final class KpiDemoServer {
             try {
                 String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 String target = jsonString(body, "target");
-                if (!"SUBMITTED".equals(target)) throw new IllegalArgumentException("demo flow only supports submission");
-                STORE.resubmit(submissionId);
-                json(exchange, 200, "{\"id\":\"" + escape(submissionId) + "\",\"state\":\"SUBMITTED\"}");
+                if ("SUBMITTED".equals(target)) { STORE.resubmit(submissionId); json(exchange, 200, "{\"id\":\"" + escape(submissionId) + "\",\"state\":\"SUBMITTED\"}"); }
+                else if ("ARCHIVED".equals(target)) { STORE.archive(submissionId); json(exchange, 200, "{\"id\":\"" + escape(submissionId) + "\",\"state\":\"ARCHIVED\"}"); }
+                else throw new IllegalArgumentException("unsupported demo transition: " + target);
             } catch (IllegalArgumentException error) { json(exchange, 400, "{\"error\":\"" + escape(error.getMessage()) + "\"}"); }
             return;
         }
