@@ -134,6 +134,9 @@ public final class KpiAssessmentController {
 
     @PostMapping("/cycles/{cycleCode}/lock")
     public R<Void> lockCycle(@PathVariable String cycleCode) {
+        current.requireCurrent();
+        var errors = cycleSchemeRepository.validate(cycleCode);
+        if (!errors.isEmpty()) throw new IllegalStateException("cycle configuration incomplete: " + String.join(";", errors));
         cycles.lock(cycleCode, current.requireCurrent().roles());
         cycleSchemeRepository.lockBindings(cycleCode);
         return R.ok();
