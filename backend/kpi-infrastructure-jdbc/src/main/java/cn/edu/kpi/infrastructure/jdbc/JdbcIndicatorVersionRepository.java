@@ -25,6 +25,7 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
     }
 
     public record VersionSummary(String version, String name, String status, String formulaVersion, int scoreScale, java.sql.Timestamp publishedAt) { }
+    public record Reference(String type, String code, String status) { }
 
     public java.util.List<IndicatorVersion.Indicator> items(String versionCode) {
         var sql = "select i.indicator_code,i.indicator_name,i.weight,i.maximum_score from indicator_item_snapshot i join indicator_version v on v.id=i.indicator_version_id where v.version_code=? order by i.sort_order";
@@ -43,6 +44,23 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
     }
 
     public void deleteDraft(String versionCode) { try(var c=dataSource.getConnection()){ c.setAutoCommit(false); String id=null; try(var q=c.prepareStatement("select id,status from indicator_version where version_code=? for update")){q.setString(1,versionCode);try(var r=q.executeQuery()){if(!r.next())throw new IllegalArgumentException("indicator version not found");if("PUBLISHED".equals(r.getString(2)))throw new IllegalStateException("published indicator version is immutable");id=r.getString(1);}} try(var d=c.prepareStatement("delete from indicator_item_snapshot where indicator_version_id=?")){d.setString(1,id);d.executeUpdate();} try(var d=c.prepareStatement("delete from indicator_version where id=?")){d.setString(1,id);d.executeUpdate();} c.commit(); } catch(SQLException e){throw new IllegalStateException("cannot delete indicator draft",e);} }
+
+    public void clonePublished(String sourceVersion, String targetVersion) {
+        try (var c=dataSource.getConnection()) {
+            c.setAutoCommit(false); String sourceId, formula; int scale;
+            try (var q=c.prepareStatement("select id,formula_version,score_scale,status from indicator_version where version_code=?")) { q.setString(1,sourceVersion); try(var r=q.executeQuery()){ if(!r.next()) throw new IllegalArgumentException("source indicator version not found"); if(!"PUBLISHED".equals(r.getString(4))) throw new IllegalStateException("only published versions can be cloned"); sourceId=r.getString(1); formula=r.getString(2); scale=r.getInt(3); } }
+            String targetId=java.util.UUID.randomUUID().toString();
+            try(var h=c.prepareStatement("insert into indicator_version(id,version_code,version_name,status,formula_version,score_scale) values(?,?,?,'DRAFT',?,?)")){h.setString(1,targetId);h.setString(2,targetVersion);h.setString(3,targetVersion);h.setString(4,formula);h.setInt(5,scale);h.executeUpdate();}
+            try(var i=c.prepareStatement("insert into indicator_item_snapshot(id,indicator_version_id,indicator_code,indicator_name,weight,maximum_score,sort_order) select uuid(),?,indicator_code,indicator_name,weight,maximum_score,sort_order from indicator_item_snapshot where indicator_version_id=?")){i.setString(1,targetId);i.setString(2,sourceId);i.executeUpdate();}
+            c.commit();
+        } catch(SQLException e) { throw new IllegalStateException("cannot clone indicator version",e); }
+    }
+
+    public java.util.List<Reference> references(String versionCode) {
+        var sql="select 'PERFORMANCE_SCHEME',s.scheme_code,s.status from performance_scheme s join indicator_version v on v.id=s.indicator_version_id where v.version_code=? union all select 'ASSESSMENT_CYCLE',c.cycle_code,b.status from assessment_cycle_scheme b join assessment_cycle c on c.id=b.assessment_cycle_id join indicator_version v on v.id=b.indicator_version_id where v.version_code=?";
+        try(var c=dataSource.getConnection();var s=c.prepareStatement(sql)){s.setString(1,versionCode);s.setString(2,versionCode);try(var r=s.executeQuery()){var out=new java.util.ArrayList<Reference>();while(r.next())out.add(new Reference(r.getString(1),r.getString(2),r.getString(3)));return java.util.List.copyOf(out);}}
+        catch(SQLException e){throw new IllegalStateException("cannot list indicator references",e);}
+    }
 
     public void publishDraft(String versionCode, java.time.Instant publishedAt) { try(var c=dataSource.getConnection()){ c.setAutoCommit(false); try(var q=c.prepareStatement("select id,status from indicator_version where version_code=? for update")){q.setString(1,versionCode);try(var r=q.executeQuery()){if(!r.next())throw new IllegalArgumentException("indicator version not found");if(!"DRAFT".equals(r.getString(2)))throw new IllegalStateException("only draft indicator versions can be published");String id=r.getString(1);try(var w=c.prepareStatement("select coalesce(sum(weight),0),count(*) from indicator_item_snapshot where indicator_version_id=?")){w.setString(1,id);try(var x=w.executeQuery()){x.next();if(x.getBigDecimal(1).compareTo(new BigDecimal("100"))!=0||x.getInt(2)==0)throw new IllegalStateException("indicator weights must total 100");}}try(var u=c.prepareStatement("update indicator_version set status='PUBLISHED',published_at=? where id=?")){u.setObject(1,publishedAt);u.setString(2,id);u.executeUpdate();}}} c.commit(); }catch(SQLException e){throw new IllegalStateException("cannot publish indicator draft",e);} }
 

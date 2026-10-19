@@ -173,6 +173,12 @@ public final class KpiAssessmentController {
     @PostMapping("/indicator-versions/{version}/publish")
     public R<Void> publishIndicatorDraft(@PathVariable String version) { current.requireCurrent(); indicatorRepository.publishDraft(version, java.time.Instant.now()); return R.ok(); }
 
+    @PostMapping("/indicator-versions/{version}/clone")
+    public R<Void> cloneIndicatorVersion(@PathVariable String version, @RequestParam String targetVersion) { current.requireCurrent(); indicatorRepository.clonePublished(version, targetVersion); return R.ok(); }
+
+    @GetMapping("/indicator-versions/{version}/references")
+    public R<List<JdbcIndicatorVersionRepository.Reference>> indicatorVersionReferences(@PathVariable String version) { current.requireCurrent(); return R.ok(indicatorRepository.references(version)); }
+
     @GetMapping("/schemes")
     public R<List<JdbcPerformanceSchemeRepository.Scheme>> schemes() { current.requireCurrent(); return R.ok(schemeRepository.list()); }
 

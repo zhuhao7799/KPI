@@ -11,6 +11,7 @@
         </el-radio-group>
       </div>
       <div v-if="selectedSummary?.status === 'DRAFT'" class="version-actions"><el-button type="primary" @click="openEdit">编辑草稿</el-button><el-button type="success" @click="publishDraftVersion">发布草稿</el-button><el-button type="danger" @click="removeDraft">删除草稿</el-button></div>
+      <div v-else-if="selectedSummary?.status === 'PUBLISHED'" class="version-actions"><el-button type="primary" @click="cloneVersion">复制为新版本</el-button><el-tag type="info">已发布版本只读</el-tag></div>
       <el-table v-if="version" :data="version.indicators" border class="mt-4">
         <el-table-column prop="code" label="指标编码" width="180" />
         <el-table-column prop="name" label="指标名称" min-width="220" />
@@ -45,8 +46,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { ElMessage } from 'element-plus';
-import { deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { cloneIndicatorVersion, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
 import type { IndicatorVersionInput, IndicatorVersionSummary } from '@/api/kpi/types';
 
 const version = ref<IndicatorVersionInput>();
@@ -74,6 +75,7 @@ async function saveDraft() {
 }
 async function publishDraftVersion() { await publishIndicatorDraft(selectedVersion.value); ElMessage.success('指标版本发布成功'); await load(); }
 async function removeDraft() { await deleteIndicatorDraft(selectedVersion.value); ElMessage.success('指标草稿已删除'); await load(); }
+async function cloneVersion() { const result = await ElMessageBox.prompt('请输入新版本编码，例如 2026-v2', '复制指标版本', { inputPattern: /^[A-Za-z0-9._-]+$/, inputErrorMessage: '只能包含字母、数字、点、下划线和短横线' }); await cloneIndicatorVersion(selectedVersion.value, result.value); ElMessage.success('已复制为草稿版本'); await load(); selectedVersion.value = result.value; await selectVersion(result.value); }
 onMounted(load);
 </script>
 
