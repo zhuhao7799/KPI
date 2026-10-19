@@ -10,6 +10,9 @@ export const lockCycle = (cycleCode: string) => request({ url: `/kpi/cycles/${cy
 export const listOrganizationUnits = (cycleCode: string): AxiosPromise<OrganizationUnitVO[]> => request({ url: '/kpi/units', method: 'get', params: { cycleCode } });
 export const getIndicatorVersion = (version: string): AxiosPromise<IndicatorVersionInput> => request({ url: `/kpi/indicator-versions/${version}`, method: 'get' });
 export const listIndicatorVersions = (): AxiosPromise<IndicatorVersionSummary[]> => request({ url: '/kpi/indicator-versions', method: 'get' });
+export interface PerformanceSchemeVO { code: string; name: string; category: string; status: string; formulaVersion: string; }
+export const listPerformanceSchemes = (): AxiosPromise<PerformanceSchemeVO[]> => request({ url: '/kpi/schemes', method: 'get' });
+export const createPerformanceScheme = (data: { code: string; name: string; category: string }) => request({ url: '/kpi/schemes', method: 'post', data });
 export const publishIndicatorVersion = (data: IndicatorVersionInput) => request({ url: '/kpi/indicator-versions', method: 'post', data });
 export const previewScore = (data: ScorePreviewRequest): AxiosPromise<ScorePreviewVO> => request({ url: '/kpi/submissions/preview', method: 'post', data });
 export const saveSubmission = (data: ScorePreviewRequest): AxiosPromise<SubmissionVO> => request({ url: '/kpi/submissions', method: 'post', data });

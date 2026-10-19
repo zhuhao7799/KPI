@@ -9,10 +9,13 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-const schemes = ref<Array<{ schemeCode: string; schemeName: string; organizationCategory: string; status: string }>>([]);
+import { createPerformanceScheme, listPerformanceSchemes, type PerformanceSchemeVO } from '@/api/kpi';
+const schemes = ref<PerformanceSchemeVO[]>([]);
 const dialog = ref(false); const form = reactive({ schemeCode: '', schemeName: '', organizationCategory: '二级学院' });
-function save() { if (!form.schemeCode || !form.schemeName) { ElMessage.warning('请填写方案编码和名称'); return; } schemes.value.push({ ...form, status: 'DRAFT' }); dialog.value = false; ElMessage.success('方案草稿已保存'); }
+async function load() { schemes.value = (await listPerformanceSchemes()).data || []; }
+async function save() { if (!form.schemeCode || !form.schemeName) { ElMessage.warning('请填写方案编码和名称'); return; } await createPerformanceScheme({ code: form.schemeCode, name: form.schemeName, category: form.organizationCategory }); dialog.value = false; ElMessage.success('方案草稿已保存'); await load(); }
+onMounted(load);
 </script>
 <style scoped>.toolbar{display:flex;justify-content:space-between;align-items:center;font-size:18px;font-weight:600}</style>
