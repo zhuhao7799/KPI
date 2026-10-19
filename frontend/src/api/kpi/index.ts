@@ -20,6 +20,7 @@ export interface SchemeIndicatorVO { code: string; name: string; weight: number;
 export const listSchemeIndicators = (code: string): AxiosPromise<SchemeIndicatorVO[]> => request({ url: `/kpi/schemes/${code}/indicators`, method: 'get' });
 export const addSchemeIndicator = (code: string, data: SchemeIndicatorVO) => request({ url: `/kpi/schemes/${code}/indicators`, method: 'post', data });
 export const deleteSchemeIndicator = (scheme: string, indicator: string) => request({ url: `/kpi/schemes/${scheme}/indicators/${indicator}`, method: 'delete' });
+export const updateSchemeIndicator = (scheme: string, indicator: string, data: Omit<SchemeIndicatorVO, 'code'>) => request({ url: `/kpi/schemes/${scheme}/indicators/${indicator}`, method: 'put', data });
 export const publishIndicatorVersion = (data: IndicatorVersionInput) => request({ url: '/kpi/indicator-versions', method: 'post', data });
 export const previewScore = (data: ScorePreviewRequest): AxiosPromise<ScorePreviewVO> => request({ url: '/kpi/submissions/preview', method: 'post', data });
 export const saveSubmission = (data: ScorePreviewRequest): AxiosPromise<SubmissionVO> => request({ url: '/kpi/submissions', method: 'post', data });
