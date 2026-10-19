@@ -22,6 +22,11 @@ public final class JdbcCycleSchemeRepository {
         catch(SQLException e){throw new IllegalStateException("cannot bind cycle scheme",e);}
     }
 
+    public void lockBindings(String cycleCode) {
+        var sql="update assessment_cycle_scheme b join assessment_cycle c on c.id=b.assessment_cycle_id set b.status='LOCKED',b.locked_at=current_timestamp(6) where c.cycle_code=? and b.status='DRAFT'";
+        try(var c=dataSource.getConnection();var s=c.prepareStatement(sql)){s.setString(1,cycleCode);s.executeUpdate();}catch(SQLException e){throw new IllegalStateException("cannot lock cycle scheme bindings",e);}
+    }
+
     public List<String> validate(String cycleCode) {
         var errors = new ArrayList<String>();
         try (var c=dataSource.getConnection()) {

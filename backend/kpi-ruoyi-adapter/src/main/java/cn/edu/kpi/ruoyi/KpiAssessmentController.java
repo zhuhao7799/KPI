@@ -135,6 +135,7 @@ public final class KpiAssessmentController {
     @PostMapping("/cycles/{cycleCode}/lock")
     public R<Void> lockCycle(@PathVariable String cycleCode) {
         cycles.lock(cycleCode, current.requireCurrent().roles());
+        cycleSchemeRepository.lockBindings(cycleCode);
         return R.ok();
     }
 
