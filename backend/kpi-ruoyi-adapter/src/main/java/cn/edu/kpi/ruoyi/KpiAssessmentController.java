@@ -180,6 +180,12 @@ public final class KpiAssessmentController {
     @PostMapping("/schemes/{code}/publish")
     public R<Void> publishScheme(@PathVariable String code) { current.requireCurrent(); schemeRepository.publishDraft(code); return R.ok(); }
 
+    @GetMapping("/schemes/{code}/indicators")
+    public R<List<JdbcPerformanceSchemeRepository.SchemeIndicator>> schemeIndicators(@PathVariable String code) { current.requireCurrent(); return R.ok(schemeRepository.indicators(code)); }
+
+    @PostMapping("/schemes/{code}/indicators")
+    public R<Void> addSchemeIndicator(@PathVariable String code, @RequestBody SchemeIndicatorInput input) { current.requireCurrent(); schemeRepository.addIndicator(code, input.code(), input.name(), input.weight(), input.maximumScore()); return R.ok(); }
+
     @PostMapping("/indicator-versions")
     public R<Void> publishIndicatorVersion(@RequestBody IndicatorVersionInput input) {
         var actor = current.requireCurrent();
@@ -313,6 +319,7 @@ public final class KpiAssessmentController {
     public record IndicatorVersionInput(String version, String formulaVersion, int scoreScale, List<IndicatorVersion.Indicator> indicators) { }
     public record IndicatorVersionView(String version, String formulaVersion, int scoreScale, List<IndicatorVersion.Indicator> indicators) { }
     public record SchemeInput(String code, String name, String category) { }
+    public record SchemeIndicatorInput(String code, String name, BigDecimal weight, BigDecimal maximumScore) { }
     public record ScoreInput(String cycleCode, String unitId, String indicatorVersion, List<ScoreItemInput> scores) { }
     public record ScoreItemInput(String indicatorCode, BigDecimal rawScore, List<String> evidenceIds) { }
     public record ScorePreviewView(BigDecimal totalScore, List<ScoreDetailView> details) { }

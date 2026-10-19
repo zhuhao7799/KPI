@@ -70,5 +70,20 @@ public final class JdbcPerformanceSchemeRepository {
         } catch (SQLException e) { throw new IllegalStateException("cannot publish performance scheme", e); }
     }
 
+    public List<SchemeIndicator> indicators(String code) {
+        var sql = "select i.indicator_code,i.indicator_name,i.weight,i.maximum_score from performance_scheme_indicator i join performance_scheme s on s.id=i.scheme_id where s.scheme_code=? order by i.sort_order";
+        try (var c = dataSource.getConnection(); var s = c.prepareStatement(sql)) {
+            s.setString(1, code); try (var r = s.executeQuery()) { var out = new ArrayList<SchemeIndicator>(); while (r.next()) out.add(new SchemeIndicator(r.getString(1), r.getString(2), r.getBigDecimal(3), r.getBigDecimal(4))); return List.copyOf(out); }
+        } catch (SQLException e) { throw new IllegalStateException("cannot list scheme indicators", e); }
+    }
+
+    public void addIndicator(String code, String indicatorCode, String name, java.math.BigDecimal weight, java.math.BigDecimal maximumScore) {
+        var sql = "insert into performance_scheme_indicator (id,scheme_id,indicator_code,indicator_name,weight,maximum_score,sort_order) select uuid(),id,?,?,?,?,coalesce((select max(x.sort_order)+1 from performance_scheme_indicator x where x.scheme_id=performance_scheme.id),1) from performance_scheme where scheme_code=? and status='DRAFT'";
+        try (var c = dataSource.getConnection(); var s = c.prepareStatement(sql)) { s.setString(1, indicatorCode); s.setString(2, name); s.setBigDecimal(3, weight); s.setBigDecimal(4, maximumScore); s.setString(5, code); if (s.executeUpdate() == 0) throw new IllegalStateException("draft scheme not found"); }
+        catch (SQLException e) { throw new IllegalStateException("cannot add scheme indicator", e); }
+    }
+
+    public record SchemeIndicator(String code, String name, java.math.BigDecimal weight, java.math.BigDecimal maximumScore) { }
+
     public record Scheme(String code, String name, String category, String status, String formulaVersion) { }
 }
