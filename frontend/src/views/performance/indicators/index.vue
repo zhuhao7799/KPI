@@ -91,5 +91,5 @@ onMounted(load);
 </script>
 
 <style scoped>
-.toolbar{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:600}.version-tabs{margin-top:16px}.version-actions{margin-top:16px}.mt-4{margin-top:16px}.items{width:100%}.item-row{display:grid;grid-template-columns:1fr 1.5fr 120px 120px auto;gap:8px;margin-bottom:8px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:600}.version-tabs{margin-top:16px}.version-actions{margin-top:16px}.mt-4{margin-top:16px}.items{width:100%}.item-row{display:grid;grid-template-columns:120px 160px 120px 100px 90px 100px 100px 130px 80px auto;gap:8px;margin-bottom:8px}
 </style>
