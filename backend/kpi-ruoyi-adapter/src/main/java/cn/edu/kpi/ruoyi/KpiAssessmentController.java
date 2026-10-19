@@ -49,6 +49,7 @@ public final class KpiAssessmentController {
     private final KpiGrantAdministrationService grants;
     private final KpiScopeAuthorizationService scope;
     private final JdbcKpiCatalog catalog;
+    private final JdbcIndicatorVersionRepository indicatorRepository;
     private final CycleAdministrationService cycles;
     private final IndicatorVersionPublicationService publication;
     private final AssessmentSnapshotReader snapshots;
@@ -64,7 +65,7 @@ public final class KpiAssessmentController {
 
     public KpiAssessmentController(KpiCurrentActor current, KpiIdentityResolver identities, Clock kpiClock,
                                    KpiGrantAdministrationService grants,
-                                   KpiScopeAuthorizationService scope, JdbcKpiCatalog catalog,
+                                   KpiScopeAuthorizationService scope, JdbcKpiCatalog catalog, JdbcIndicatorVersionRepository indicatorRepository,
                                    CycleAdministrationService cycles, IndicatorVersionPublicationService publication,
                                    AssessmentSnapshotReader snapshots, AssessmentSubmissionService submissions,
                                    SubmissionContextReader contexts, ResultQueryService results,
@@ -72,7 +73,7 @@ public final class KpiAssessmentController {
                                    EvidenceAccessService evidence, JdbcEvidenceRepository evidenceRepository,
                                    JdbcEvidenceLookup evidenceLookup, PrivateEvidenceStorage evidenceStorage) {
         this.current = current; this.identities = identities; this.clock = kpiClock; this.grants = grants;
-        this.scope = scope; this.catalog = catalog; this.cycles = cycles;
+        this.scope = scope; this.catalog = catalog; this.indicatorRepository = indicatorRepository; this.cycles = cycles;
         this.publication = publication; this.snapshots = snapshots; this.submissions = submissions;
         this.contexts = contexts; this.results = results; this.tasks = tasks; this.taskRepository = taskRepository;
         this.evidence = evidence; this.evidenceRepository = evidenceRepository;
@@ -147,6 +148,12 @@ public final class KpiAssessmentController {
         current.requireCurrent();
         var published = snapshots.indicatorVersion(version);
         return R.ok(new IndicatorVersionView(published.version(), "weighted-score-v1", 4, published.indicators()));
+    }
+
+    @GetMapping("/indicator-versions")
+    public R<List<JdbcIndicatorVersionRepository.VersionSummary>> indicatorVersions() {
+        current.requireCurrent();
+        return R.ok(indicatorRepository.listVersions());
     }
 
     @PostMapping("/indicator-versions")

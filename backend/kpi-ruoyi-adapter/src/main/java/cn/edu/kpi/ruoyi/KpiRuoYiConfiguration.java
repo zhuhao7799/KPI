@@ -55,7 +55,7 @@ public class KpiRuoYiConfiguration {
     @Bean public JdbcKpiCatalog kpiCatalog(DataSource dataSource) { return new JdbcKpiCatalog(dataSource); }
     @Bean public AssessmentCycleRepository kpiCycles(DataSource dataSource) { return new JdbcAssessmentCycleRepository(dataSource); }
     @Bean public OrganizationUnitSnapshotRepository kpiUnits(DataSource dataSource) { return new JdbcOrganizationUnitSnapshotRepository(dataSource); }
-    @Bean public IndicatorVersionRepository kpiIndicators(DataSource dataSource) { return new JdbcIndicatorVersionRepository(dataSource); }
+    @Bean public JdbcIndicatorVersionRepository kpiIndicators(DataSource dataSource) { return new JdbcIndicatorVersionRepository(dataSource); }
     @Bean public AssessmentSnapshotReader kpiSnapshots(DataSource dataSource) { return new JdbcAssessmentSnapshotReader(dataSource); }
     @Bean public SubmissionRepository kpiSubmissions(DataSource dataSource) { return new JdbcSubmissionRepository(dataSource); }
     @Bean public SubmissionContextReader kpiSubmissionContexts(DataSource dataSource) { return new JdbcSubmissionContextReader(dataSource); }

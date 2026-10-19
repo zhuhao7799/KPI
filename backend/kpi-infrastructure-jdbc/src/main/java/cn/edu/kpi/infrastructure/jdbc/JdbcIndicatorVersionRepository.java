@@ -15,6 +15,17 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
     private final DataSource dataSource;
     public JdbcIndicatorVersionRepository(DataSource dataSource) { this.dataSource = dataSource; }
 
+    public java.util.List<VersionSummary> listVersions() {
+        var sql = "select version_code, version_name, status, formula_version, score_scale, published_at from indicator_version order by published_at desc, version_code desc";
+        try (var connection = dataSource.getConnection(); var statement = connection.prepareStatement(sql); var rows = statement.executeQuery()) {
+            var result = new java.util.ArrayList<VersionSummary>();
+            while (rows.next()) result.add(new VersionSummary(rows.getString(1), rows.getString(2), rows.getString(3), rows.getString(4), rows.getInt(5), rows.getTimestamp(6)));
+            return java.util.List.copyOf(result);
+        } catch (SQLException error) { throw new IllegalStateException("cannot list indicator versions", error); }
+    }
+
+    public record VersionSummary(String version, String name, String status, String formulaVersion, int scoreScale, java.sql.Timestamp publishedAt) { }
+
     @Override public Optional<IndicatorVersion> findPublished(String versionCode) {
         var header = "select id, version_code from indicator_version where version_code = ? and status = 'PUBLISHED'";
         try (var connection = dataSource.getConnection(); var statement = connection.prepareStatement(header)) {

@@ -1,6 +1,6 @@
 import type { AxiosPromise } from '@/utils/api-types';
 import request from '@/utils/request';
-import type { AssessmentCycleVO, ApprovalTaskVO, EvidenceAttachmentInput, EvidenceAttachmentVO, EvidenceRegisterInput, EvidenceRegisterVO, EvidenceUploadVO, IndicatorVersionInput, KpiActorVO, OrganizationUnitVO, RankedResultVO, ScorePreviewRequest, ScorePreviewVO, SubmissionVO } from './types';
+import type { AssessmentCycleVO, ApprovalTaskVO, EvidenceAttachmentInput, EvidenceAttachmentVO, EvidenceRegisterInput, EvidenceRegisterVO, EvidenceUploadVO, IndicatorVersionInput, IndicatorVersionSummary, KpiActorVO, OrganizationUnitVO, RankedResultVO, ScorePreviewRequest, ScorePreviewVO, SubmissionVO } from './types';
 
 export const listCycles = (): AxiosPromise<AssessmentCycleVO[]> => request({ url: '/kpi/cycles', method: 'get' });
 export const getCurrentKpiActor = (): AxiosPromise<KpiActorVO> => request({ url: '/kpi/me', method: 'get' });
@@ -9,6 +9,7 @@ export const replaceCycleUnits = (cycleCode: string, data: OrganizationUnitVO[])
 export const lockCycle = (cycleCode: string) => request({ url: `/kpi/cycles/${cycleCode}/lock`, method: 'post' });
 export const listOrganizationUnits = (cycleCode: string): AxiosPromise<OrganizationUnitVO[]> => request({ url: '/kpi/units', method: 'get', params: { cycleCode } });
 export const getIndicatorVersion = (version: string): AxiosPromise<IndicatorVersionInput> => request({ url: `/kpi/indicator-versions/${version}`, method: 'get' });
+export const listIndicatorVersions = (): AxiosPromise<IndicatorVersionSummary[]> => request({ url: '/kpi/indicator-versions', method: 'get' });
 export const publishIndicatorVersion = (data: IndicatorVersionInput) => request({ url: '/kpi/indicator-versions', method: 'post', data });
 export const previewScore = (data: ScorePreviewRequest): AxiosPromise<ScorePreviewVO> => request({ url: '/kpi/submissions/preview', method: 'post', data });
 export const saveSubmission = (data: ScorePreviewRequest): AxiosPromise<SubmissionVO> => request({ url: '/kpi/submissions', method: 'post', data });

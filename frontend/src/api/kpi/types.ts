@@ -3,6 +3,7 @@ export interface KpiActorVO { userId: string; roles: Array<'SCHOOL_ADMIN' | 'ASS
 export interface OrganizationUnitVO { id: string; name: string; category: string; parentId?: string; }
 export interface IndicatorItemInput { code: string; name: string; weight: number; maximumScore: number; }
 export interface IndicatorVersionInput { version: string; formulaVersion: string; scoreScale: number; indicators: IndicatorItemInput[]; }
+export interface IndicatorVersionSummary { version: string; name: string; status: string; formulaVersion: string; scoreScale: number; publishedAt?: string; }
 export interface ScoreInput { indicatorCode: string; rawScore: number; evidenceIds: string[]; }
 export interface ScorePreviewRequest { cycleCode: string; unitId: string; indicatorVersion: string; scores: ScoreInput[]; }
 export interface ScorePreviewVO { totalScore: number; details: Array<ScoreInput & { weightedScore: number }>; }
