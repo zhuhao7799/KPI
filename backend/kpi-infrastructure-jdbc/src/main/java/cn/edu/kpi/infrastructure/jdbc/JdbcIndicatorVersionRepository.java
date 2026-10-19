@@ -26,6 +26,7 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
 
     public record VersionSummary(String version, String name, String status, String formulaVersion, int scoreScale, java.sql.Timestamp publishedAt) { }
     public record Reference(String type, String code, String status) { }
+    public record Change(String type, String code, String fromName, String toName) { }
 
     public java.util.List<IndicatorVersion.Indicator> items(String versionCode) {
         var sql = "select i.indicator_code,i.indicator_name,i.weight,i.maximum_score,i.indicator_category,i.indicator_type,i.measurement_unit,i.scoring_method,i.evidence_required,i.description from indicator_item_snapshot i join indicator_version v on v.id=i.indicator_version_id where v.version_code=? order by i.sort_order";
@@ -62,6 +63,15 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
         var sql="select 'PERFORMANCE_SCHEME',s.scheme_code,s.status from performance_scheme s join indicator_version v on v.id=s.indicator_version_id where v.version_code=? union all select 'ASSESSMENT_CYCLE',c.cycle_code,b.status from assessment_cycle_scheme b join assessment_cycle c on c.id=b.assessment_cycle_id join indicator_version v on v.id=b.indicator_version_id where v.version_code=?";
         try(var c=dataSource.getConnection();var s=c.prepareStatement(sql)){s.setString(1,versionCode);s.setString(2,versionCode);try(var r=s.executeQuery()){var out=new java.util.ArrayList<Reference>();while(r.next())out.add(new Reference(r.getString(1),r.getString(2),r.getString(3)));return java.util.List.copyOf(out);}}
         catch(SQLException e){throw new IllegalStateException("cannot list indicator references",e);}
+    }
+
+    public java.util.List<Change> compare(String fromVersion, String toVersion) {
+        var left = new java.util.HashMap<String, IndicatorVersion.Indicator>(); for (var item : items(fromVersion)) left.put(item.code(), item);
+        var right = new java.util.HashMap<String, IndicatorVersion.Indicator>(); for (var item : items(toVersion)) right.put(item.code(), item);
+        var codes = new java.util.TreeSet<String>(); codes.addAll(left.keySet()); codes.addAll(right.keySet());
+        var result = new java.util.ArrayList<Change>();
+        for (var code : codes) { var a=left.get(code); var b=right.get(code); if(a==null) result.add(new Change("新增",code,null,b.name())); else if(b==null) result.add(new Change("删除",code,a.name(),null)); else if(!a.equals(b)) result.add(new Change("修改",code,a.name(),b.name())); }
+        return java.util.List.copyOf(result);
     }
 
     public void publishDraft(String versionCode, java.time.Instant publishedAt) { try(var c=dataSource.getConnection()){ c.setAutoCommit(false); try(var q=c.prepareStatement("select id,status from indicator_version where version_code=? for update")){q.setString(1,versionCode);try(var r=q.executeQuery()){if(!r.next())throw new IllegalArgumentException("indicator version not found");if(!"DRAFT".equals(r.getString(2)))throw new IllegalStateException("only draft indicator versions can be published");String id=r.getString(1);try(var w=c.prepareStatement("select coalesce(sum(weight),0),count(*) from indicator_item_snapshot where indicator_version_id=?")){w.setString(1,id);try(var x=w.executeQuery()){x.next();if(x.getBigDecimal(1).compareTo(new BigDecimal("100"))!=0||x.getInt(2)==0)throw new IllegalStateException("indicator weights must total 100");}}try(var u=c.prepareStatement("update indicator_version set status='PUBLISHED',published_at=? where id=?")){u.setObject(1,publishedAt);u.setString(2,id);u.executeUpdate();}}} c.commit(); }catch(SQLException e){throw new IllegalStateException("cannot publish indicator draft",e);} }
