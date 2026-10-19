@@ -167,7 +167,7 @@ public final class KpiAssessmentController {
     @PostMapping("/schemes")
     public R<Void> createScheme(@RequestBody SchemeInput input) {
         var actor = current.requireCurrent();
-        schemeRepository.create(input.code(), input.name(), input.category(), actor.userId());
+        schemeRepository.create(input.code(), input.name(), input.category(), input.indicatorVersion(), actor.userId());
         return R.ok();
     }
 
@@ -176,7 +176,7 @@ public final class KpiAssessmentController {
 
     @PutMapping("/schemes/{code}")
     public R<Void> updateScheme(@PathVariable String code, @RequestBody SchemeInput input) {
-        current.requireCurrent(); schemeRepository.updateDraft(code, input.name(), input.category()); return R.ok();
+        current.requireCurrent(); schemeRepository.updateDraft(code, input.name(), input.category(), input.indicatorVersion()); return R.ok();
     }
 
     @PostMapping("/schemes/{code}/publish")
@@ -198,10 +198,10 @@ public final class KpiAssessmentController {
     public R<List<JdbcPerformanceSchemeRepository.SchemeIndicator>> schemeIndicators(@PathVariable String code) { current.requireCurrent(); return R.ok(schemeRepository.indicators(code)); }
 
     @PostMapping("/schemes/{code}/indicators")
-    public R<Void> addSchemeIndicator(@PathVariable String code, @RequestBody SchemeIndicatorInput input) { current.requireCurrent(); schemeRepository.addIndicator(code, input.code(), input.name(), input.weight(), input.maximumScore()); return R.ok(); }
+    public R<Void> addSchemeIndicator(@PathVariable String code, @RequestBody SchemeIndicatorInput input) { current.requireCurrent(); schemeRepository.addIndicator(code, input.code(), input.weight()); return R.ok(); }
 
     @PutMapping("/schemes/{code}/indicators/{indicatorCode}")
-    public R<Void> updateSchemeIndicator(@PathVariable String code, @PathVariable String indicatorCode, @RequestBody SchemeIndicatorInput input) { current.requireCurrent(); schemeRepository.updateIndicator(code, indicatorCode, input.name(), input.weight(), input.maximumScore()); return R.ok(); }
+    public R<Void> updateSchemeIndicator(@PathVariable String code, @PathVariable String indicatorCode, @RequestBody SchemeIndicatorInput input) { current.requireCurrent(); schemeRepository.updateIndicator(code, indicatorCode, input.weight()); return R.ok(); }
 
     @DeleteMapping("/schemes/{code}/indicators/{indicatorCode}")
     public R<Void> deleteSchemeIndicator(@PathVariable String code, @PathVariable String indicatorCode) { current.requireCurrent(); schemeRepository.deleteIndicator(code, indicatorCode); return R.ok(); }
@@ -338,7 +338,7 @@ public final class KpiAssessmentController {
     public record CycleView(String code, String name, LocalDate startsOn, LocalDate endsOn, AssessmentCycle.Status state) { }
     public record IndicatorVersionInput(String version, String formulaVersion, int scoreScale, List<IndicatorVersion.Indicator> indicators) { }
     public record IndicatorVersionView(String version, String formulaVersion, int scoreScale, List<IndicatorVersion.Indicator> indicators) { }
-    public record SchemeInput(String code, String name, String category) { }
+    public record SchemeInput(String code, String name, String category, String indicatorVersion) { }
     public record SchemeIndicatorInput(String code, String name, BigDecimal weight, BigDecimal maximumScore) { }
     public record CycleSchemeInput(String category, String schemeCode, String indicatorVersion) { }
     public record ScoreInput(String cycleCode, String unitId, String indicatorVersion, List<ScoreItemInput> scores) { }
