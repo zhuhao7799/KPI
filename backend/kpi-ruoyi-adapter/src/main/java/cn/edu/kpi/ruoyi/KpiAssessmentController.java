@@ -21,6 +21,7 @@ import cn.edu.kpi.domain.security.KpiRole;
 import cn.edu.kpi.domain.submission.SubmissionState;
 import cn.edu.kpi.infrastructure.jdbc.JdbcKpiCatalog;
 import cn.edu.kpi.infrastructure.jdbc.JdbcIndicatorVersionRepository;
+import cn.edu.kpi.infrastructure.jdbc.JdbcPerformanceSchemeRepository;
 import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceLookup;
 import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceRepository;
 import cn.edu.kpi.application.assessment.AssessmentSnapshotReader;
@@ -51,6 +52,7 @@ public final class KpiAssessmentController {
     private final KpiScopeAuthorizationService scope;
     private final JdbcKpiCatalog catalog;
     private final JdbcIndicatorVersionRepository indicatorRepository;
+    private final JdbcPerformanceSchemeRepository schemeRepository;
     private final CycleAdministrationService cycles;
     private final IndicatorVersionPublicationService publication;
     private final AssessmentSnapshotReader snapshots;
@@ -66,7 +68,7 @@ public final class KpiAssessmentController {
 
     public KpiAssessmentController(KpiCurrentActor current, KpiIdentityResolver identities, Clock kpiClock,
                                    KpiGrantAdministrationService grants,
-                                   KpiScopeAuthorizationService scope, JdbcKpiCatalog catalog, JdbcIndicatorVersionRepository indicatorRepository,
+                                   KpiScopeAuthorizationService scope, JdbcKpiCatalog catalog, JdbcIndicatorVersionRepository indicatorRepository, JdbcPerformanceSchemeRepository schemeRepository,
                                    CycleAdministrationService cycles, IndicatorVersionPublicationService publication,
                                    AssessmentSnapshotReader snapshots, AssessmentSubmissionService submissions,
                                    SubmissionContextReader contexts, ResultQueryService results,
@@ -74,7 +76,7 @@ public final class KpiAssessmentController {
                                    EvidenceAccessService evidence, JdbcEvidenceRepository evidenceRepository,
                                    JdbcEvidenceLookup evidenceLookup, PrivateEvidenceStorage evidenceStorage) {
         this.current = current; this.identities = identities; this.clock = kpiClock; this.grants = grants;
-        this.scope = scope; this.catalog = catalog; this.indicatorRepository = indicatorRepository; this.cycles = cycles;
+        this.scope = scope; this.catalog = catalog; this.indicatorRepository = indicatorRepository; this.schemeRepository = schemeRepository; this.cycles = cycles;
         this.publication = publication; this.snapshots = snapshots; this.submissions = submissions;
         this.contexts = contexts; this.results = results; this.tasks = tasks; this.taskRepository = taskRepository;
         this.evidence = evidence; this.evidenceRepository = evidenceRepository;
@@ -155,6 +157,16 @@ public final class KpiAssessmentController {
     public R<List<JdbcIndicatorVersionRepository.VersionSummary>> indicatorVersions() {
         current.requireCurrent();
         return R.ok(indicatorRepository.listVersions());
+    }
+
+    @GetMapping("/schemes")
+    public R<List<JdbcPerformanceSchemeRepository.Scheme>> schemes() { current.requireCurrent(); return R.ok(schemeRepository.list()); }
+
+    @PostMapping("/schemes")
+    public R<Void> createScheme(@RequestBody SchemeInput input) {
+        var actor = current.requireCurrent();
+        schemeRepository.create(input.code(), input.name(), input.category(), actor.userId());
+        return R.ok();
     }
 
     @PostMapping("/indicator-versions")
@@ -289,6 +301,7 @@ public final class KpiAssessmentController {
     public record CycleView(String code, String name, LocalDate startsOn, LocalDate endsOn, AssessmentCycle.Status state) { }
     public record IndicatorVersionInput(String version, String formulaVersion, int scoreScale, List<IndicatorVersion.Indicator> indicators) { }
     public record IndicatorVersionView(String version, String formulaVersion, int scoreScale, List<IndicatorVersion.Indicator> indicators) { }
+    public record SchemeInput(String code, String name, String category) { }
     public record ScoreInput(String cycleCode, String unitId, String indicatorVersion, List<ScoreItemInput> scores) { }
     public record ScoreItemInput(String indicatorCode, BigDecimal rawScore, List<String> evidenceIds) { }
     public record ScorePreviewView(BigDecimal totalScore, List<ScoreDetailView> details) { }
