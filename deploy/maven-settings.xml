@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+  <!-- 使上游 POM 的 public 仓库在受限网络中稳定落到 Maven Central。 -->
+  <mirrors>
+    <mirror>
+      <id>kpi-central</id>
+      <mirrorOf>public</mirrorOf>
+      <name>Maven Central</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </mirror>
+  </mirrors>
+</settings>

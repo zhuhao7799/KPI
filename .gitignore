@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+!/frontend/.env.development
+!/frontend/.env.production
+**/target/
+frontend/dist/
+**/data/
+*.log
+.idea/
+.vscode/

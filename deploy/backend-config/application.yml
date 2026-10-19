@@ -1,0 +1,31 @@
+# 外置本地覆盖配置。运行 RuoYi-Vue-Plus 时通过
+# --spring.config.additional-location=optional:file:../../deploy/backend-config/
+# 加载；不要把真实密码提交到仓库。
+spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          url: jdbc:mysql://127.0.0.1:${MYSQL_PORT:3306}/${MYSQL_DATABASE:kpi}?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia%2FShanghai&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
+          username: ${MYSQL_USER:kpi_app}
+          password: ${MYSQL_PASSWORD:change-me-local}
+  data:
+    redis:
+      host: 127.0.0.1
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:change-me-redis}
+
+redisson:
+  singleServerConfig:
+    address: redis://127.0.0.1:${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:change-me-redis}
+kpi:
+  evidence:
+    root: ${KPI_EVIDENCE_ROOT:./data/kpi-evidence}
+
+api-decrypt:
+  enabled: false

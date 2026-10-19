@@ -1,0 +1,48 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: kpi-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Asia/Shanghai
+    ports:
+      - '${MYSQL_PORT:-3306}:3306'
+    volumes:
+      - kpi-mysql-data:/var/lib/mysql
+      - ./mysql-init/10_ruoyi_baseline.sql:/docker-entrypoint-initdb.d/10_ruoyi_baseline.sql:ro
+      - ../backend/ruoyi-vue-plus/script/sql/ry_vue.sql:/seed/ry_vue.sql:ro
+      - ../backend/kpi-storage/migrations/V1__assessment_snapshot.sql:/docker-entrypoint-initdb.d/20_kpi_snapshot.sql:ro
+      - ../backend/kpi-storage/migrations/V2__submission_state_machine.sql:/docker-entrypoint-initdb.d/30_kpi_submission_state.sql:ro
+      - ../backend/kpi-storage/migrations/V3__authorization_scope.sql:/docker-entrypoint-initdb.d/40_kpi_authorization.sql:ro
+      - ../backend/kpi-storage/migrations/V4__evidence_private_access.sql:/docker-entrypoint-initdb.d/50_kpi_evidence.sql:ro
+      - ../backend/kpi-storage/migrations/V5__approval_task.sql:/docker-entrypoint-initdb.d/60_kpi_approval_task.sql:ro
+      - ../backend/kpi-storage/migrations/V6__pending_review_uniqueness.sql:/docker-entrypoint-initdb.d/70_kpi_pending_review.sql:ro
+      - ../backend/kpi-storage/migrations/V7__workflow_projection.sql:/docker-entrypoint-initdb.d/80_kpi_workflow_projection.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: kpi-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    command: ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD}']
+    volumes:
+      - kpi-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  kpi-mysql-data:
+  kpi-redis-data:

@@ -1,0 +1,33 @@
+diff --git a/pom.xml b/pom.xml
+index f1ea268..46f11a9 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -461,6 +461,11 @@
+     </dependencyManagement>
+ 
+     <modules>
++        <!-- University KPI modules are kept beside the upstream submodule and built in this reactor. -->
++        <module>../kpi-domain</module>
++        <module>../kpi-application</module>
++        <module>../kpi-infrastructure-jdbc</module>
++        <module>../kpi-ruoyi-adapter</module>
+         <!-- web服务入口 -->
+         <module>ruoyi-admin</module>
+         <!-- common 通用模块 -->
+diff --git a/ruoyi-admin/pom.xml b/ruoyi-admin/pom.xml
+index 8f2d51c..0b6b987 100644
+--- a/ruoyi-admin/pom.xml
++++ b/ruoyi-admin/pom.xml
+@@ -16,6 +16,12 @@
+     </description>
+ 
+     <dependencies>
++        <!-- KPI adapter is added to the application classpath when building from ../pom.xml. -->
++        <dependency>
++            <groupId>org.dromara</groupId>
++            <artifactId>kpi-ruoyi-adapter</artifactId>
++            <version>${revision}</version>
++        </dependency>
+ 
+         <!-- Mysql驱动包 -->
+         <dependency>

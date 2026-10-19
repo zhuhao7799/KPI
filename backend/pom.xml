@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.dromara</groupId>
+        <artifactId>ruoyi-vue-plus</artifactId>
+        <version>${revision}</version>
+        <relativePath>ruoyi-vue-plus/pom.xml</relativePath>
+    </parent>
+    <artifactId>kpi-platform-backend</artifactId>
+    <packaging>pom</packaging>
+    <name>University KPI Platform Backend</name>
+    <modules>
+        <module>kpi-domain</module>
+        <module>kpi-application</module>
+        <module>kpi-infrastructure-jdbc</module>
+        <module>kpi-ruoyi-adapter</module>
+    </modules>
+</project>

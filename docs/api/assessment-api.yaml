@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: 高校组织绩效考核 API
+  version: 1.0.0-draft
+paths:
+  /kpi/me:
+    get: { summary: 查询当前登录用户的绩效角色, responses: { '200': { description: 用户与生效角色 } } }
+  /kpi/security/roles:
+    post: { summary: 校级管理员绑定绩效业务角色, responses: { '200': { description: 已绑定 }, '403': { description: 无授权管理权限 } } }
+  /kpi/security/roles/{bindingId}:
+    delete: { summary: 撤销绩效业务角色, responses: { '200': { description: 已撤销 } } }
+  /kpi/security/scopes:
+    post: { summary: 校级管理员授权周期与单位范围, responses: { '200': { description: 已授权 }, '403': { description: 无授权管理权限 } } }
+  /kpi/security/scopes/{grantId}:
+    delete: { summary: 撤销周期与单位范围, responses: { '200': { description: 已撤销 } } }
+  /kpi/cycles:
+    get: { summary: 查询考核周期, responses: { '200': { description: 成功 } } }
+    post: { summary: 创建考核周期, responses: { '201': { description: 已创建 }, '403': { description: 缺少 CYCLE_MANAGE } } }
+  /kpi/cycles/{cycleCode}/units:
+    put: { summary: 导入草稿周期单位快照, responses: { '204': { description: 已保存 }, '409': { description: 周期已锁定 } } }
+  /kpi/cycles/{cycleCode}/lock:
+    post: { summary: 锁定周期与单位范围, responses: { '204': { description: 已锁定 } } }
+  /kpi/indicator-versions:
+    post: { summary: 发布指标版本, responses: { '201': { description: 已发布 }, '409': { description: 版本已存在 } } }
+  /kpi/submissions/preview:
+    post: { summary: 预览评分, responses: { '200': { description: 评分明细与总分 } } }
+  /kpi/submissions:
+    post: { summary: 保存填报草稿, responses: { '201': { description: 已保存 } } }
+  /kpi/submissions/{submissionId}/transitions:
+    post: { summary: 提交、退回、确认、归档或作废, responses: { '204': { description: 状态已变更 }, '409': { description: 状态流转不允许 } } }
+  /kpi/evidence:
+    post: { summary: 登记私有材料元数据, responses: { '201': { description: 已登记 } } }
+  /kpi/submissions/{submissionId}/evidence:
+    post: { summary: 上传私有材料并关联到填报指标, responses: { '200': { description: 已上传并关联 }, '403': { description: 无单位填报权限 } } }
+  /kpi/evidence/{evidenceId}/download:
+    get: { summary: 鉴权、审计并下载材料, responses: { '200': { description: 私有文件 }, '403': { description: 无材料访问权限 } } }
+  /kpi/evidence/{evidenceId}/attachments:
+    post: { summary: 将已登记材料关联到填报指标, responses: { '201': { description: 已关联 }, '404': { description: 材料或填报不存在 } } }
+  /kpi/evidence/{evidenceId}/access:
+    post: { summary: 授权并审计材料查看或下载, responses: { '204': { description: 已审计 }, '403': { description: 缺少 EVIDENCE_READ } } }
+  /kpi/tasks:
+    get: { summary: 查询当前办理人待办, responses: { '200': { description: 待办列表 } } }
+    post: { summary: 指派审核人, responses: { '200': { description: 已创建审核待办 } } }
+  /kpi/tasks/{taskId}/complete:
+    post: { summary: 办理审核待办并将填报确认或退回, responses: { '200': { description: 已办理 } } }
+  /kpi/results:
+    get: { summary: 查询确认或归档结果及分类排名, responses: { '200': { description: 排名结果 }, '403': { description: 缺少 RESULT_VIEW } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+security: [{ bearerAuth: [] }]

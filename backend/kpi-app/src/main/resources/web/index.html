@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>高校组织绩效考核平台</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:48px auto;padding:0 18px;color:#172033}label{display:block;margin:14px 0}input{margin-left:12px;width:90px;padding:6px}button{padding:8px 14px;background:#1268d6;color:white;border:0;border-radius:4px}#result{margin-top:24px;padding:16px;background:#f4f7fb;border-radius:6px;white-space:pre-wrap}</style>
+<h1>组织绩效评分预览</h1>
+<p>2026 年度 · 指标版本 2026-v1</p>
+<label>考核单位 <select id="unit"><option>正在加载单位清单…</option></select></label>
+<label>年度目标完成（满分 100，权重 60）<input id="goal" type="number" value="92" min="0" max="100"></label>
+<label>服务保障（满分 100，权重 40）<input id="service" type="number" value="88" min="0" max="100"></label>
+<button id="calculate">计算预览</button><div id="result">等待计算</div>
+<script>
+const unit=document.querySelector('#unit');fetch('/api/organization-units').then(r=>r.json()).then(data=>{unit.replaceChildren(...data.items.map(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=`${x.name}（${x.category}，工作计划：${x.workPlanStatus}）`;return o}));});
+document.querySelector('#calculate').onclick=async()=>{const goal=document.querySelector('#goal').value,service=document.querySelector('#service').value,r=document.querySelector('#result'),selected=unit.options[unit.selectedIndex];const response=await fetch(`/api/score-preview?goal=${encodeURIComponent(goal)}&service=${encodeURIComponent(service)}`);const data=await response.json();r.textContent=response.ok?`单位：${selected?.textContent}\n总分：${data.totalScore}\n${data.details.map(x=>`${x.name}：${x.weightedScore}`).join('\n')}`:`计算失败：${data.error}`};
+</script>
+</html>

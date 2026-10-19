@@ -1,0 +1,3 @@
+[submodule "ruoyi-vue-plus"]
+	path = backend/ruoyi-vue-plus
+	url = https://github.com/dromara/RuoYi-Vue-Plus.git
