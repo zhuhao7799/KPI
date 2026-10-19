@@ -43,5 +43,13 @@ public final class JdbcPerformanceSchemeRepository {
         } catch (SQLException e) { throw new IllegalStateException("cannot delete performance scheme", e); }
     }
 
+    public void updateDraft(String code, String name, String category) {
+        var sql = "update performance_scheme set scheme_name=?, organization_category=?, updated_at=current_timestamp(6) where scheme_code=? and status='DRAFT'";
+        try (var c = dataSource.getConnection(); var s = c.prepareStatement(sql)) {
+            s.setString(1, name); s.setString(2, category); s.setString(3, code);
+            if (s.executeUpdate() == 0) throw new IllegalStateException("only existing draft schemes can be edited");
+        } catch (SQLException e) { throw new IllegalStateException("cannot update performance scheme", e); }
+    }
+
     public record Scheme(String code, String name, String category, String status, String formulaVersion) { }
 }

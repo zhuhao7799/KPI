@@ -172,6 +172,11 @@ public final class KpiAssessmentController {
     @DeleteMapping("/schemes/{code}")
     public R<Void> deleteScheme(@PathVariable String code) { current.requireCurrent(); schemeRepository.deleteDraft(code); return R.ok(); }
 
+    @PutMapping("/schemes/{code}")
+    public R<Void> updateScheme(@PathVariable String code, @RequestBody SchemeInput input) {
+        current.requireCurrent(); schemeRepository.updateDraft(code, input.name(), input.category()); return R.ok();
+    }
+
     @PostMapping("/indicator-versions")
     public R<Void> publishIndicatorVersion(@RequestBody IndicatorVersionInput input) {
         var actor = current.requireCurrent();
