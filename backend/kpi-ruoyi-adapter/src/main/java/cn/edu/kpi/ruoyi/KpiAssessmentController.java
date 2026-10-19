@@ -165,16 +165,19 @@ public final class KpiAssessmentController {
     }
 
     @PostMapping("/indicator-versions/draft")
-    public R<Void> saveIndicatorDraft(@RequestBody IndicatorVersionInput input) { current.requireCurrent(); indicatorRepository.saveDraft(new IndicatorVersion(input.version(), input.indicators()), input.formulaVersion(), input.scoreScale()); return R.ok(); }
+    public R<Void> saveIndicatorDraft(@RequestBody IndicatorVersionInput input) { var actor=current.requireCurrent(); indicatorRepository.saveDraft(new IndicatorVersion(input.version(), input.indicators()), input.formulaVersion(), input.scoreScale()); indicatorRepository.audit("DRAFT_SAVE", input.version(), actor.userId(), "{\"indicatorCount\":" + input.indicators().size() + "}"); return R.ok(); }
 
     @DeleteMapping("/indicator-versions/{version}/draft")
-    public R<Void> deleteIndicatorDraft(@PathVariable String version) { current.requireCurrent(); indicatorRepository.deleteDraft(version); return R.ok(); }
+    public R<Void> deleteIndicatorDraft(@PathVariable String version) { var actor=current.requireCurrent(); indicatorRepository.deleteDraft(version); indicatorRepository.audit("DRAFT_DELETE", version, actor.userId(), "{}"); return R.ok(); }
 
     @PostMapping("/indicator-versions/{version}/publish")
-    public R<Void> publishIndicatorDraft(@PathVariable String version) { current.requireCurrent(); indicatorRepository.publishDraft(version, java.time.Instant.now()); return R.ok(); }
+    public R<Void> publishIndicatorDraft(@PathVariable String version) { var actor=current.requireCurrent(); indicatorRepository.publishDraft(version, java.time.Instant.now()); indicatorRepository.audit("PUBLISH", version, actor.userId(), "{}"); return R.ok(); }
 
     @PostMapping("/indicator-versions/{version}/clone")
-    public R<Void> cloneIndicatorVersion(@PathVariable String version, @RequestParam String targetVersion) { current.requireCurrent(); indicatorRepository.clonePublished(version, targetVersion); return R.ok(); }
+    public R<Void> cloneIndicatorVersion(@PathVariable String version, @RequestParam String targetVersion) { var actor=current.requireCurrent(); indicatorRepository.clonePublished(version, targetVersion); indicatorRepository.audit("CLONE", targetVersion, actor.userId(), "{\"source\":\"" + version + "\"}"); return R.ok(); }
+
+    @PostMapping("/indicator-versions/{version}/archive")
+    public R<Void> archiveIndicatorVersion(@PathVariable String version) { var actor=current.requireCurrent(); indicatorRepository.archive(version); indicatorRepository.audit("ARCHIVE", version, actor.userId(), "{}"); return R.ok(); }
 
     @GetMapping("/indicator-versions/{version}/references")
     public R<List<JdbcIndicatorVersionRepository.Reference>> indicatorVersionReferences(@PathVariable String version) { current.requireCurrent(); return R.ok(indicatorRepository.references(version)); }

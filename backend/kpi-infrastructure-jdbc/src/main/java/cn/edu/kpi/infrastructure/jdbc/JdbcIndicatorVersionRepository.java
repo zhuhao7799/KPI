@@ -74,6 +74,16 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
         return java.util.List.copyOf(result);
     }
 
+    public void archive(String versionCode) {
+        try (var c=dataSource.getConnection(); var s=c.prepareStatement("update indicator_version set status='ARCHIVED' where version_code=? and status='PUBLISHED'")) { s.setString(1,versionCode); if(s.executeUpdate()==0) throw new IllegalStateException("only published indicator versions can be archived"); }
+        catch(SQLException e){throw new IllegalStateException("cannot archive indicator version",e);}
+    }
+
+    public void audit(String eventType, String aggregateId, String actorId, String payload) {
+        try (var c=dataSource.getConnection(); var s=c.prepareStatement("insert into assessment_audit_event(id,aggregate_type,aggregate_id,event_type,actor_id,occurred_at,payload_json) values(uuid(),'INDICATOR_VERSION',?,?,?,current_timestamp(6),?)")) { s.setString(1,aggregateId); s.setString(2,eventType); s.setString(3,actorId); s.setString(4,payload == null ? "{}" : payload); s.executeUpdate(); }
+        catch(SQLException e){throw new IllegalStateException("cannot write indicator audit",e);}
+    }
+
     public void publishDraft(String versionCode, java.time.Instant publishedAt) { try(var c=dataSource.getConnection()){ c.setAutoCommit(false); try(var q=c.prepareStatement("select id,status from indicator_version where version_code=? for update")){q.setString(1,versionCode);try(var r=q.executeQuery()){if(!r.next())throw new IllegalArgumentException("indicator version not found");if(!"DRAFT".equals(r.getString(2)))throw new IllegalStateException("only draft indicator versions can be published");String id=r.getString(1);try(var w=c.prepareStatement("select coalesce(sum(weight),0),count(*) from indicator_item_snapshot where indicator_version_id=?")){w.setString(1,id);try(var x=w.executeQuery()){x.next();if(x.getBigDecimal(1).compareTo(new BigDecimal("100"))!=0||x.getInt(2)==0)throw new IllegalStateException("indicator weights must total 100");}}try(var u=c.prepareStatement("update indicator_version set status='PUBLISHED',published_at=? where id=?")){u.setObject(1,publishedAt);u.setString(2,id);u.executeUpdate();}}} c.commit(); }catch(SQLException e){throw new IllegalStateException("cannot publish indicator draft",e);} }
 
     @Override public Optional<IndicatorVersion> findPublished(String versionCode) {

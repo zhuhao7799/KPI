@@ -21,6 +21,7 @@ export const publishIndicatorDraft = (version: string) => request({ url: `/kpi/i
 export const cloneIndicatorVersion = (version: string, targetVersion: string) => request({ url: `/kpi/indicator-versions/${version}/clone`, method: 'post', params: { targetVersion } });
 export const listIndicatorReferences = (version: string) => request({ url: `/kpi/indicator-versions/${version}/references`, method: 'get' });
 export const compareIndicatorVersions = (from: string, to: string) => request({ url: '/kpi/indicator-versions/compare', method: 'get', params: { from, to } });
+export const archiveIndicatorVersion = (version: string) => request({ url: `/kpi/indicator-versions/${version}/archive`, method: 'post' });
 export interface PerformanceSchemeVO { code: string; name: string; category: string; status: string; formulaVersion: string; indicatorVersion: string; }
 export const listPerformanceSchemes = (): AxiosPromise<PerformanceSchemeVO[]> => request({ url: '/kpi/schemes', method: 'get' });
 export const createPerformanceScheme = (data: { code: string; name: string; category: string; indicatorVersion: string }) => request({ url: '/kpi/schemes', method: 'post', data });

@@ -11,7 +11,7 @@
         </el-radio-group>
       </div>
       <div v-if="selectedSummary?.status === 'DRAFT'" class="version-actions"><el-button type="primary" @click="openEdit">编辑草稿</el-button><el-button type="success" @click="publishDraftVersion">发布草稿</el-button><el-button type="danger" @click="removeDraft">删除草稿</el-button></div>
-      <div v-else-if="selectedSummary?.status === 'PUBLISHED'" class="version-actions"><el-button type="primary" @click="cloneVersion">复制为新版本</el-button><el-tag type="info">已发布版本只读</el-tag></div>
+      <div v-else-if="selectedSummary?.status === 'PUBLISHED'" class="version-actions"><el-button type="primary" @click="cloneVersion">复制为新版本</el-button><el-button type="warning" @click="archiveVersion">归档版本</el-button><el-tag type="info">已发布版本只读</el-tag></div>
       <el-alert v-if="references.length" class="mt-4" type="warning" :closable="false" title="当前版本存在业务引用，不能删除或直接变更" />
       <el-table v-if="references.length" :data="references" border class="mt-4"><el-table-column prop="type" label="引用类型" width="180" /><el-table-column prop="code" label="引用对象" /><el-table-column prop="status" label="状态" width="120" /></el-table>
       <div v-if="version" class="filters"><el-input v-model="keyword" clearable placeholder="搜索编码或名称" /><el-select v-model="categoryFilter" clearable placeholder="筛选分类"><el-option v-for="option in kpi_indicator_category" :key="option.value" :label="option.label" :value="option.value" /></el-select></div>
@@ -51,6 +51,7 @@
               <el-button text type="danger" @click="form.indicators.splice(index, 1)">删除</el-button>
             </div>
             <el-button plain @click="form.indicators.push({ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' })">新增指标</el-button>
+            <el-button plain @click="fileInput?.click()">导入 CSV</el-button><el-button plain @click="exportCsv">导出 CSV</el-button><input ref="fileInput" type="file" accept=".csv,text/csv" hidden @change="importCsv" />
           </div>
         </el-form-item>
       </el-form>
@@ -62,7 +63,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, toRefs } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { cloneIndicatorVersion, compareIndicatorVersions, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorReferences, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
+import { archiveIndicatorVersion, cloneIndicatorVersion, compareIndicatorVersions, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorReferences, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
 import { useDict } from '@/utils/dict';
 import type { IndicatorVersionInput, IndicatorVersionSummary } from '@/api/kpi/types';
 
@@ -75,6 +76,7 @@ const saving = ref(false);
 const form = reactive<IndicatorVersionInput>({ version: '', formulaVersion: 'weighted-score-v1', scoreScale: 4, indicators: [] });
 const references = ref<Array<{ type: string; code: string; status: string }>>([]);
 const detailVisible = ref(false); const detailItem = ref<IndicatorVersionInput['indicators'][number]>();
+const fileInput = ref<HTMLInputElement>();
 const keyword = ref(''); const categoryFilter = ref(''); const compareVisible = ref(false); const compareFrom = ref(''); const compareTo = ref(''); const changes = ref<Array<{ type: string; code: string; fromName?: string; toName?: string }>>([]);
 const filteredIndicators = computed(() => (version.value?.indicators || []).filter(item => (!keyword.value || `${item.code}${item.name}`.toLowerCase().includes(keyword.value.toLowerCase())) && (!categoryFilter.value || item.category === categoryFilter.value)));
 const { kpi_indicator_category, kpi_indicator_type, kpi_measurement_unit, kpi_scoring_method } = toRefs<any>(useDict('kpi_indicator_category', 'kpi_indicator_type', 'kpi_measurement_unit', 'kpi_scoring_method'));
@@ -86,7 +88,7 @@ async function load() {
     await selectVersion(selectedVersion.value);
   } catch { version.value = undefined; }
 }
-async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); references.value = (await listIndicatorReferences(code)).data || []; version.value = summary?.status === 'DRAFT' ? { version: code, formulaVersion: summary.formulaVersion, scoreScale: summary.scoreScale, indicators: (await getIndicatorVersionItems(code)).data || [] } : (await getIndicatorVersion(code)).data; }
+async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); references.value = (await listIndicatorReferences(code)).data || []; version.value = summary?.status === 'PUBLISHED' ? (await getIndicatorVersion(code)).data : { version: code, formulaVersion: summary?.formulaVersion || 'weighted-score-v1', scoreScale: summary?.scoreScale || 4, indicators: (await getIndicatorVersionItems(code)).data || [] }; }
 function showDetail(item: IndicatorVersionInput['indicators'][number]) { detailItem.value = item; detailVisible.value = true; }
 function moveIndicator(item: IndicatorVersionInput['indicators'][number], delta: number) { if (!version.value || selectedSummary.value?.status !== 'DRAFT') return; const index = version.value.indicators.indexOf(item); const target = index + delta; if (target < 0 || target >= version.value.indicators.length) return; const rows = version.value.indicators; [rows[index], rows[target]] = [rows[target], rows[index]]; version.value = { ...version.value, indicators: [...rows] }; }
 function openCreate() { form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = [{ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' }]; dialogVisible.value = true; }
@@ -98,6 +100,9 @@ async function saveDraft() {
 }
 async function publishDraftVersion() { await publishIndicatorDraft(selectedVersion.value); ElMessage.success('指标版本发布成功'); await load(); }
 async function removeDraft() { await deleteIndicatorDraft(selectedVersion.value); ElMessage.success('指标草稿已删除'); await load(); }
+async function archiveVersion() { await ElMessageBox.confirm('归档后不能再被新方案引用，是否继续？', '归档确认'); await archiveIndicatorVersion(selectedVersion.value); ElMessage.success('版本已归档'); await load(); }
+function exportCsv() { const header='编码,名称,分类,性质,单位,权重,满分,评分方式,需要材料,说明'; const rows=(form.indicators || []).map(item => [item.code,item.name,item.category,item.indicatorType,item.measurementUnit,item.weight,item.maximumScore,item.scoringMethod,item.evidenceRequired ? '是' : '否',item.description].map(value => `"${String(value ?? '').replace(/"/g,'""')}"`).join(',')); const blob=new Blob(['\ufeff'+[header,...rows].join('\n')], { type:'text/csv;charset=utf-8' }); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=`${form.version || 'indicators'}.csv`; link.click(); URL.revokeObjectURL(url); }
+function importCsv(event: Event) { const input=event.target as HTMLInputElement; const file=input.files?.[0]; if(!file)return; const reader=new FileReader(); reader.onload=() => { const lines=String(reader.result || '').split(/\r?\n/).slice(1).filter(Boolean); form.indicators=lines.map(line => { const cells=line.split(',').map(cell => cell.replace(/^"|"$/g,'').replace(/""/g,'"')); return { code:cells[0] || '', name:cells[1] || '', category:cells[2] || '综合管理', indicatorType:cells[3] || '定量', measurementUnit:cells[4] || '分', weight:Number(cells[5] || 0), maximumScore:Number(cells[6] || 100), scoringMethod:cells[7] || '加权评分', evidenceRequired:cells[8] === '是', description:cells[9] || '' }; }); ElMessage.success(`已导入 ${form.indicators.length} 条指标`); input.value=''; }; reader.readAsText(file,'UTF-8'); }
 async function cloneVersion() { const result = await ElMessageBox.prompt('请输入新版本编码，例如 2026-v2', '复制指标版本', { inputPattern: /^[A-Za-z0-9._-]+$/, inputErrorMessage: '只能包含字母、数字、点、下划线和短横线' }); await cloneIndicatorVersion(selectedVersion.value, result.value); ElMessage.success('已复制为草稿版本'); await load(); selectedVersion.value = result.value; await selectVersion(result.value); }
 async function runCompare() { if (!compareFrom.value || !compareTo.value || compareFrom.value === compareTo.value) { ElMessage.warning('请选择两个不同版本'); return; } changes.value = (await compareIndicatorVersions(compareFrom.value, compareTo.value)).data || []; }
 onMounted(load);
