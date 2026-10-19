@@ -39,6 +39,9 @@ test -n "$formal_submission_id"
 test -n "$formal_task_id"
 curl -fsS -X POST -H 'Content-Type: application/json' --data '{"target":"SUBMITTED"}' "http://127.0.0.1:18080/kpi/submissions/$formal_submission_id/transitions" >/tmp/kpi-formal-transition.json
 grep -q '"state":"SUBMITTED"' /tmp/kpi-formal-transition.json
+printf 'demo material' >/tmp/kpi-demo-material.txt
+curl -fsS -X POST -F 'indicatorCode=goal' -F 'file=@/tmp/kpi-demo-material.txt' "http://127.0.0.1:18080/kpi/submissions/$formal_submission_id/evidence" >/tmp/kpi-uploaded-evidence.json
+grep -q '"filename":"上传材料"' /tmp/kpi-uploaded-evidence.json
 curl -fsS -X POST -H 'Content-Type: application/json' --data '{"storageKey":"private/2026/unit-demo-001/goal.pdf","filename":"goal.pdf","mediaType":"application/pdf","byteSize":128,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}' http://127.0.0.1:18080/kpi/evidence >/tmp/kpi-evidence.json
 grep -q '"private":true' /tmp/kpi-evidence.json
 evidence_id="$(sed -n 's/.*"id":"\([^"]*\)".*/\1/p' /tmp/kpi-evidence.json)"

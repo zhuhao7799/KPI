@@ -83,6 +83,14 @@ public final class KpiDemoServer {
 
     private static void formalSubmission(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
+        if ("POST".equals(exchange.getRequestMethod()) && path.matches("/kpi/submissions/[^/]+/evidence")) {
+            String submissionId = path.substring("/kpi/submissions/".length(), path.length() - "/evidence".length());
+            byte[] body = exchange.getRequestBody().readAllBytes();
+            if (body.length == 0) { json(exchange, 400, "{\"error\":\"file is required\"}"); return; }
+            String id = java.util.UUID.randomUUID().toString();
+            json(exchange, 201, "{\"id\":\"" + id + "\",\"filename\":\"上传材料\",\"byteSize\":" + body.length + ",\"sha256\":\"" + "0".repeat(64) + "\",\"submissionId\":\"" + escape(submissionId) + "\"}");
+            return;
+        }
         if ("POST".equals(exchange.getRequestMethod()) && path.matches("/kpi/submissions/[^/]+/transitions")) {
             String submissionId = path.substring("/kpi/submissions/".length(), path.length() - "/transitions".length());
             try {
@@ -110,6 +118,14 @@ public final class KpiDemoServer {
 
     private static void evidence(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
+        if ("POST".equals(exchange.getRequestMethod()) && path.matches("/kpi/submissions/[^/]+/evidence")) {
+            String submissionId = path.substring("/kpi/submissions/".length(), path.length() - "/evidence".length());
+            byte[] body = exchange.getRequestBody().readAllBytes();
+            if (body.length == 0) { json(exchange, 400, "{\"error\":\"file is required\"}"); return; }
+            String id = java.util.UUID.randomUUID().toString();
+            json(exchange, 201, "{\"id\":\"" + id + "\",\"filename\":\"上传材料\",\"byteSize\":" + body.length + ",\"sha256\":\"" + "0".repeat(64) + "\",\"submissionId\":\"" + escape(submissionId) + "\"}");
+            return;
+        }
         if ("POST".equals(exchange.getRequestMethod()) && path.matches("/kpi/evidence/[^/]+/attachments")) {
             String evidenceId = path.substring("/kpi/evidence/".length(), path.length() - "/attachments".length());
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
