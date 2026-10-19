@@ -13,6 +13,7 @@ export const listIndicatorVersions = (): AxiosPromise<IndicatorVersionSummary[]>
 export interface PerformanceSchemeVO { code: string; name: string; category: string; status: string; formulaVersion: string; }
 export const listPerformanceSchemes = (): AxiosPromise<PerformanceSchemeVO[]> => request({ url: '/kpi/schemes', method: 'get' });
 export const createPerformanceScheme = (data: { code: string; name: string; category: string }) => request({ url: '/kpi/schemes', method: 'post', data });
+export const deletePerformanceScheme = (code: string) => request({ url: `/kpi/schemes/${code}`, method: 'delete' });
 export const publishIndicatorVersion = (data: IndicatorVersionInput) => request({ url: '/kpi/indicator-versions', method: 'post', data });
 export const previewScore = (data: ScorePreviewRequest): AxiosPromise<ScorePreviewVO> => request({ url: '/kpi/submissions/preview', method: 'post', data });
 export const saveSubmission = (data: ScorePreviewRequest): AxiosPromise<SubmissionVO> => request({ url: '/kpi/submissions', method: 'post', data });

@@ -27,5 +27,21 @@ public final class JdbcPerformanceSchemeRepository {
         } catch (SQLException e) { throw new IllegalStateException("cannot create performance scheme", e); }
     }
 
+    public void deleteDraft(String code) {
+        try (var c = dataSource.getConnection()) {
+            c.setAutoCommit(false);
+            try (var check = c.prepareStatement("select id,status from performance_scheme where scheme_code=? for update")) {
+                check.setString(1, code);
+                try (var r = check.executeQuery()) {
+                    if (!r.next()) throw new IllegalArgumentException("performance scheme not found: " + code);
+                    if (!"DRAFT".equals(r.getString(2))) throw new IllegalStateException("only draft schemes can be deleted");
+                    try (var items = c.prepareStatement("delete from performance_scheme_indicator where scheme_id=?")) { items.setString(1, r.getString(1)); items.executeUpdate(); }
+                    try (var scheme = c.prepareStatement("delete from performance_scheme where id=?")) { scheme.setString(1, r.getString(1)); scheme.executeUpdate(); }
+                }
+            }
+            c.commit();
+        } catch (SQLException e) { throw new IllegalStateException("cannot delete performance scheme", e); }
+    }
+
     public record Scheme(String code, String name, String category, String status, String formulaVersion) { }
 }

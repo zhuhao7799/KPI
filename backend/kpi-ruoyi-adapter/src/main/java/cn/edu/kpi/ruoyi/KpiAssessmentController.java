@@ -169,6 +169,9 @@ public final class KpiAssessmentController {
         return R.ok();
     }
 
+    @DeleteMapping("/schemes/{code}")
+    public R<Void> deleteScheme(@PathVariable String code) { current.requireCurrent(); schemeRepository.deleteDraft(code); return R.ok(); }
+
     @PostMapping("/indicator-versions")
     public R<Void> publishIndicatorVersion(@RequestBody IndicatorVersionInput input) {
         var actor = current.requireCurrent();
