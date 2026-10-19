@@ -50,6 +50,8 @@ curl -fsS -X POST -H 'Content-Type: application/json' --data '{"submissionId":"'
 grep -q '"indicatorCode":"goal"' /tmp/kpi-evidence-link.json
 curl -fsS http://127.0.0.1:18080/kpi/tasks >/tmp/kpi-tasks.json
 grep -q '"state":"PENDING"' /tmp/kpi-tasks.json
+curl -fsS -X POST -H 'Content-Type: application/json' --data '{"submissionId":"'"$formal_submission_id"'","assigneeId":"local-reviewer"}' http://127.0.0.1:18080/kpi/tasks >/tmp/kpi-task-assignment.json
+grep -q '"assigneeId":"local-reviewer"' /tmp/kpi-task-assignment.json
 curl -fsS -X POST -H 'Content-Type: application/json' --data '{"approved":true,"comment":"材料齐全，审核通过"}' "http://127.0.0.1:18080/kpi/tasks/$formal_task_id/complete" >/tmp/kpi-task-complete.json
 grep -q '"submissionState":"CONFIRMED"' /tmp/kpi-task-complete.json
 curl -fsS 'http://127.0.0.1:18080/kpi/results?cycleCode=2026' >/tmp/kpi-results.json

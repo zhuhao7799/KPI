@@ -146,6 +146,16 @@ public final class KpiDemoServer {
 
     private static void tasks(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
+        if ("POST".equals(exchange.getRequestMethod()) && "/kpi/tasks".equals(path)) {
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            try {
+                String submissionId = jsonString(body, "submissionId");
+                String assigneeId = jsonString(body, "assigneeId");
+                STORE.assignTask(submissionId, assigneeId);
+                json(exchange, 200, "{\"submissionId\":\"" + escape(submissionId) + "\",\"assigneeId\":\"" + escape(assigneeId) + "\",\"state\":\"PENDING\"}");
+            } catch (IllegalArgumentException error) { json(exchange, 400, "{\"error\":\"" + escape(error.getMessage()) + "\"}"); }
+            return;
+        }
         if ("GET".equals(exchange.getRequestMethod()) && "/kpi/tasks".equals(path)) { json(exchange, 200, "[" + String.join(",", STORE.listTasks()) + "]"); return; }
         if ("POST".equals(exchange.getRequestMethod()) && path.matches("/kpi/tasks/[^/]+/complete")) {
             String taskId = path.substring("/kpi/tasks/".length(), path.length() - "/complete".length());

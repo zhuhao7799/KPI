@@ -66,6 +66,18 @@ public final class SubmissionStore {
         write(submissions, updated);
     }
     public synchronized List<String> listTasks() { return read(tasks, "cannot read approval tasks"); }
+    public synchronized String assignTask(String submissionId, String assigneeId) {
+        if (assigneeId == null || assigneeId.isBlank()) throw new IllegalArgumentException("assignee is required");
+        var current = read(tasks, "cannot read approval tasks");
+        var updated = new java.util.ArrayList<String>(); boolean found = false;
+        for (String task : current) {
+            if (task.contains("\"submissionId\":\"" + submissionId + "\"") && task.contains("\"state\":\"PENDING\"")) {
+                found = true; updated.add(task.replaceFirst("\"assigneeId\":\"[^\"]*\"", "\"assigneeId\":\"" + escape(assigneeId) + "\""));
+            } else updated.add(task);
+        }
+        if (!found) throw new IllegalArgumentException("pending review task was not found");
+        write(tasks, updated); return submissionId;
+    }
     public synchronized String completeReviewTask(String taskId, boolean approved, String comment) {
         var currentTasks = read(tasks, "cannot read approval tasks");
         String submissionId = null;

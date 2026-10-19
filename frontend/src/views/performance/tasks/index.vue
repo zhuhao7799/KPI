@@ -1,6 +1,6 @@
 <template>
   <div class="page p-2">
-    <el-card shadow="never"><template #header><div class="heading"><div><h1>绩效审核待办</h1><p>仅显示当前登录人有权办理的任务</p></div><el-button :loading="loading" @click="refresh">刷新</el-button></div></template>
+    <el-card shadow="never"><template #header><div class="heading"><div><h1>绩效审核待办</h1><p>仅显示当前登录人有权办理的任务</p></div><div class="toolbar"><el-input v-model="assigneeId" placeholder="审核人账号" clearable /><el-button type="primary" :loading="assigning" @click="assignFirst">指派首条待办</el-button><el-button :loading="loading" @click="refresh">刷新</el-button></div></div></template>
       <el-table :data="tasks" v-loading="loading" empty-text="暂无待办任务">
         <el-table-column prop="id" label="任务编号" min-width="220" show-overflow-tooltip />
         <el-table-column prop="submissionId" label="填报编号" min-width="220" show-overflow-tooltip />
@@ -13,11 +13,13 @@
 <script setup name="PerformanceTasks" lang="ts">
 import { onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { completeTask, listTasks } from '@/api/kpi';
+import { assignReview, completeTask, listTasks } from '@/api/kpi';
 import type { ApprovalTaskVO } from '@/api/kpi/types';
 
 const tasks = ref<ApprovalTaskVO[]>([]);
 const loading = ref(false);
+const assigning = ref(false);
+const assigneeId = ref('local-reviewer');
 async function refresh() {
   loading.value = true;
   try { tasks.value = (await listTasks()).data || []; }
@@ -33,8 +35,15 @@ async function decide(taskId: string, approved: boolean) {
     if (error !== 'cancel' && error !== 'close') throw error;
   }
 }
+async function assignFirst() {
+  const task = tasks.value[0];
+  if (!task || !assigneeId.value.trim()) return;
+  assigning.value = true;
+  try { await assignReview(task.submissionId, assigneeId.value.trim()); ElMessage.success('待办已指派'); await refresh(); }
+  finally { assigning.value = false; }
+}
 onMounted(refresh);
 </script>
 <style scoped>
-.page .el-card{border-radius:12px}.heading{display:flex;justify-content:space-between;align-items:center}.heading h1{margin:0;color:#183b60;font-size:24px}.heading p{margin:8px 0 0;color:#789;font-size:13px}
+.page .el-card{border-radius:12px}.heading{display:flex;justify-content:space-between;align-items:center;gap:16px}.heading h1{margin:0;color:#183b60;font-size:24px}.heading p{margin:8px 0 0;color:#789;font-size:13px}.toolbar{display:flex;align-items:center;gap:8px}.toolbar .el-input{width:170px}@media(max-width:700px){.heading,.toolbar{align-items:stretch;flex-direction:column}.toolbar .el-input{width:100%}}
 </style>
