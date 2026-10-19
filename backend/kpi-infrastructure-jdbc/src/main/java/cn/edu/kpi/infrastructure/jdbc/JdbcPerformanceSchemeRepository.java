@@ -55,7 +55,7 @@ public final class JdbcPerformanceSchemeRepository {
     public void publishDraft(String code) {
         try (var c = dataSource.getConnection()) {
             c.setAutoCommit(false);
-            try (var check = c.prepareStatement("select id,status from performance_scheme where scheme_code=? for update")) {
+            try (var check = c.prepareStatement("select s.id,s.status from performance_scheme s join indicator_version v on v.id=s.indicator_version_id and v.status='PUBLISHED' where s.scheme_code=? for update")) {
                 check.setString(1, code);
                 try (var r = check.executeQuery()) {
                     if (!r.next()) throw new IllegalArgumentException("performance scheme not found: " + code);
