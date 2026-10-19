@@ -10,8 +10,9 @@
           <el-radio-button v-for="item in versions" :key="item.version" :value="item.version">{{ item.version }} · {{ item.status }}</el-radio-button>
         </el-radio-group>
       </div>
-      <div v-if="selectedSummary?.status === 'DRAFT'" class="version-actions"><el-button type="primary" @click="openEdit">编辑草稿</el-button><el-button type="success" @click="publishDraftVersion">发布草稿</el-button><el-button type="danger" @click="removeDraft">删除草稿</el-button></div>
-      <div v-else-if="selectedSummary?.status === 'PUBLISHED'" class="version-actions"><el-button type="primary" @click="cloneVersion">复制为新版本</el-button><el-button type="warning" @click="archiveVersion">归档版本</el-button><el-tag type="info">已发布版本只读</el-tag></div>
+      <div v-if="selectedSummary?.status === 'DRAFT'" class="version-actions"><el-button type="primary" @click="openEdit">编辑草稿</el-button><el-button type="success" @click="publishDraftVersion">发布草稿</el-button><el-button type="danger" @click="removeDraft">删除草稿</el-button><el-button @click="auditVisible = true">操作记录</el-button></div>
+      <div v-else-if="selectedSummary?.status === 'PUBLISHED'" class="version-actions"><el-button type="primary" @click="cloneVersion">复制为新版本</el-button><el-button type="warning" @click="archiveVersion">归档版本</el-button><el-button @click="auditVisible = true">操作记录</el-button><el-tag type="info">已发布版本只读</el-tag></div>
+      <div v-else-if="selectedSummary?.status === 'ARCHIVED'" class="version-actions"><el-button @click="auditVisible = true">操作记录</el-button><el-tag type="info">已归档版本只读</el-tag></div>
       <el-alert v-if="references.length" class="mt-4" type="warning" :closable="false" title="当前版本存在业务引用，不能删除或直接变更" />
       <el-table v-if="references.length" :data="references" border class="mt-4"><el-table-column prop="type" label="引用类型" width="180" /><el-table-column prop="code" label="引用对象" /><el-table-column prop="status" label="状态" width="120" /></el-table>
       <div v-if="version" class="filters"><el-input v-model="keyword" clearable placeholder="搜索编码或名称" /><el-select v-model="categoryFilter" clearable placeholder="筛选分类"><el-option v-for="option in kpi_indicator_category" :key="option.value" :label="option.label" :value="option.value" /></el-select></div>
@@ -30,6 +31,7 @@
     </el-card>
     <el-drawer v-model="detailVisible" title="指标详情" size="420px"><el-descriptions v-if="detailItem" :column="1" border><el-descriptions-item label="指标编码">{{ detailItem.code }}</el-descriptions-item><el-descriptions-item label="指标名称">{{ detailItem.name }}</el-descriptions-item><el-descriptions-item label="指标分类">{{ detailItem.category }}</el-descriptions-item><el-descriptions-item label="指标性质">{{ detailItem.indicatorType }}</el-descriptions-item><el-descriptions-item label="计量单位">{{ detailItem.measurementUnit }}</el-descriptions-item><el-descriptions-item label="评分方式">{{ detailItem.scoringMethod }}</el-descriptions-item><el-descriptions-item label="权重">{{ detailItem.weight }}%</el-descriptions-item><el-descriptions-item label="满分">{{ detailItem.maximumScore }}</el-descriptions-item><el-descriptions-item label="佐证材料">{{ detailItem.evidenceRequired ? '必须' : '不要求' }}</el-descriptions-item><el-descriptions-item label="指标说明">{{ detailItem.description || '暂无' }}</el-descriptions-item></el-descriptions></el-drawer>
     <el-dialog v-model="compareVisible" title="指标版本差异" width="760px"><el-form inline><el-select v-model="compareFrom" placeholder="基准版本"><el-option v-for="item in versions" :key="`from-${item.version}`" :label="item.version" :value="item.version" /></el-select><el-select v-model="compareTo" placeholder="对比版本"><el-option v-for="item in versions" :key="`to-${item.version}`" :label="item.version" :value="item.version" /></el-select><el-button type="primary" @click="runCompare">比较</el-button></el-form><el-table :data="changes" border><el-table-column prop="type" label="变更类型" width="100" /><el-table-column prop="code" label="指标编码" /><el-table-column prop="fromName" label="基准版本" /><el-table-column prop="toName" label="对比版本" /></el-table></el-dialog>
+    <el-dialog v-model="auditVisible" title="指标版本操作记录" width="720px"><el-table :data="audits" border><el-table-column prop="eventType" label="操作" width="120" /><el-table-column prop="actorId" label="操作人" width="180" /><el-table-column prop="occurredAt" label="时间" width="190" /><el-table-column prop="payload" label="详情" /></el-table></el-dialog>
 
     <el-dialog v-model="dialogVisible" title="发布指标版本" width="680px">
       <el-form :model="form" label-width="110px">
@@ -63,7 +65,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, toRefs } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { archiveIndicatorVersion, cloneIndicatorVersion, compareIndicatorVersions, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorReferences, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
+import { archiveIndicatorVersion, cloneIndicatorVersion, compareIndicatorVersions, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorAudit, listIndicatorReferences, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
 import { useDict } from '@/utils/dict';
 import type { IndicatorVersionInput, IndicatorVersionSummary } from '@/api/kpi/types';
 
@@ -77,7 +79,7 @@ const form = reactive<IndicatorVersionInput>({ version: '', formulaVersion: 'wei
 const references = ref<Array<{ type: string; code: string; status: string }>>([]);
 const detailVisible = ref(false); const detailItem = ref<IndicatorVersionInput['indicators'][number]>();
 const fileInput = ref<HTMLInputElement>();
-const keyword = ref(''); const categoryFilter = ref(''); const compareVisible = ref(false); const compareFrom = ref(''); const compareTo = ref(''); const changes = ref<Array<{ type: string; code: string; fromName?: string; toName?: string }>>([]);
+const keyword = ref(''); const categoryFilter = ref(''); const compareVisible = ref(false); const compareFrom = ref(''); const compareTo = ref(''); const changes = ref<Array<{ type: string; code: string; fromName?: string; toName?: string }>>([]); const auditVisible = ref(false); const audits = ref<Array<{ eventType: string; actorId: string; occurredAt: string; payload: string }>>([]);
 const filteredIndicators = computed(() => (version.value?.indicators || []).filter(item => (!keyword.value || `${item.code}${item.name}`.toLowerCase().includes(keyword.value.toLowerCase())) && (!categoryFilter.value || item.category === categoryFilter.value)));
 const { kpi_indicator_category, kpi_indicator_type, kpi_measurement_unit, kpi_scoring_method } = toRefs<any>(useDict('kpi_indicator_category', 'kpi_indicator_type', 'kpi_measurement_unit', 'kpi_scoring_method'));
 
@@ -88,7 +90,7 @@ async function load() {
     await selectVersion(selectedVersion.value);
   } catch { version.value = undefined; }
 }
-async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); references.value = (await listIndicatorReferences(code)).data || []; version.value = summary?.status === 'PUBLISHED' ? (await getIndicatorVersion(code)).data : { version: code, formulaVersion: summary?.formulaVersion || 'weighted-score-v1', scoreScale: summary?.scoreScale || 4, indicators: (await getIndicatorVersionItems(code)).data || [] }; }
+async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); references.value = (await listIndicatorReferences(code)).data || []; audits.value = (await listIndicatorAudit(code)).data || []; version.value = summary?.status === 'PUBLISHED' ? (await getIndicatorVersion(code)).data : { version: code, formulaVersion: summary?.formulaVersion || 'weighted-score-v1', scoreScale: summary?.scoreScale || 4, indicators: (await getIndicatorVersionItems(code)).data || [] }; }
 function showDetail(item: IndicatorVersionInput['indicators'][number]) { detailItem.value = item; detailVisible.value = true; }
 function moveIndicator(item: IndicatorVersionInput['indicators'][number], delta: number) { if (!version.value || selectedSummary.value?.status !== 'DRAFT') return; const index = version.value.indicators.indexOf(item); const target = index + delta; if (target < 0 || target >= version.value.indicators.length) return; const rows = version.value.indicators; [rows[index], rows[target]] = [rows[target], rows[index]]; version.value = { ...version.value, indicators: [...rows] }; }
 function openCreate() { form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = [{ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' }]; dialogVisible.value = true; }

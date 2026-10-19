@@ -182,6 +182,9 @@ public final class KpiAssessmentController {
     @GetMapping("/indicator-versions/{version}/references")
     public R<List<JdbcIndicatorVersionRepository.Reference>> indicatorVersionReferences(@PathVariable String version) { current.requireCurrent(); return R.ok(indicatorRepository.references(version)); }
 
+    @GetMapping("/indicator-versions/{version}/audit")
+    public R<List<JdbcIndicatorVersionRepository.Audit>> indicatorVersionAudit(@PathVariable String version) { current.requireCurrent(); return R.ok(indicatorRepository.audits(version)); }
+
     @GetMapping("/indicator-versions/compare")
     public R<List<JdbcIndicatorVersionRepository.Change>> compareIndicatorVersions(@RequestParam String from, @RequestParam String to) { current.requireCurrent(); return R.ok(indicatorRepository.compare(from, to)); }
 

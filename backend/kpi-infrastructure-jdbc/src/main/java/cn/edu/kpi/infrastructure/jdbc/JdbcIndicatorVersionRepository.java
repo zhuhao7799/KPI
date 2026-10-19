@@ -27,6 +27,7 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
     public record VersionSummary(String version, String name, String status, String formulaVersion, int scoreScale, java.sql.Timestamp publishedAt) { }
     public record Reference(String type, String code, String status) { }
     public record Change(String type, String code, String fromName, String toName) { }
+    public record Audit(String eventType, String actorId, java.sql.Timestamp occurredAt, String payload) { }
 
     public java.util.List<IndicatorVersion.Indicator> items(String versionCode) {
         var sql = "select i.indicator_code,i.indicator_name,i.weight,i.maximum_score,i.indicator_category,i.indicator_type,i.measurement_unit,i.scoring_method,i.evidence_required,i.description from indicator_item_snapshot i join indicator_version v on v.id=i.indicator_version_id where v.version_code=? order by i.sort_order";
@@ -63,6 +64,12 @@ public final class JdbcIndicatorVersionRepository implements IndicatorVersionRep
         var sql="select 'PERFORMANCE_SCHEME',s.scheme_code,s.status from performance_scheme s join indicator_version v on v.id=s.indicator_version_id where v.version_code=? union all select 'ASSESSMENT_CYCLE',c.cycle_code,b.status from assessment_cycle_scheme b join assessment_cycle c on c.id=b.assessment_cycle_id join indicator_version v on v.id=b.indicator_version_id where v.version_code=?";
         try(var c=dataSource.getConnection();var s=c.prepareStatement(sql)){s.setString(1,versionCode);s.setString(2,versionCode);try(var r=s.executeQuery()){var out=new java.util.ArrayList<Reference>();while(r.next())out.add(new Reference(r.getString(1),r.getString(2),r.getString(3)));return java.util.List.copyOf(out);}}
         catch(SQLException e){throw new IllegalStateException("cannot list indicator references",e);}
+    }
+
+    public java.util.List<Audit> audits(String versionCode) {
+        var sql="select event_type,actor_id,occurred_at,payload_json from assessment_audit_event where aggregate_type='INDICATOR_VERSION' and aggregate_id=? order by occurred_at desc";
+        try(var c=dataSource.getConnection();var s=c.prepareStatement(sql)){s.setString(1,versionCode);try(var r=s.executeQuery()){var out=new java.util.ArrayList<Audit>();while(r.next())out.add(new Audit(r.getString(1),r.getString(2),r.getTimestamp(3),r.getString(4)));return java.util.List.copyOf(out);}}
+        catch(SQLException e){throw new IllegalStateException("cannot list indicator audits",e);}
     }
 
     public java.util.List<Change> compare(String fromVersion, String toVersion) {
