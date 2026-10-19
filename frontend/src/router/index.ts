@@ -80,6 +80,12 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: { title: '单位绩效填报', icon: 'edit' }
       },
       {
+        path: '/performance/indicators',
+        component: () => import('@/views/performance/indicators/index.vue'),
+        name: 'PerformanceIndicators',
+        meta: { title: '指标体系管理', icon: 'list' }
+      },
+      {
         path: '/performance/tasks',
         component: () => import('@/views/performance/tasks/index.vue'),
         name: 'PerformanceTasks',
