@@ -51,5 +51,24 @@ public final class JdbcPerformanceSchemeRepository {
         } catch (SQLException e) { throw new IllegalStateException("cannot update performance scheme", e); }
     }
 
+    public void publishDraft(String code) {
+        try (var c = dataSource.getConnection()) {
+            c.setAutoCommit(false);
+            try (var check = c.prepareStatement("select id,status from performance_scheme where scheme_code=? for update")) {
+                check.setString(1, code);
+                try (var r = check.executeQuery()) {
+                    if (!r.next()) throw new IllegalArgumentException("performance scheme not found: " + code);
+                    if (!"DRAFT".equals(r.getString(2))) throw new IllegalStateException("only draft schemes can be published");
+                    try (var count = c.prepareStatement("select coalesce(sum(weight),0) from performance_scheme_indicator where scheme_id=?")) {
+                        count.setString(1, r.getString(1));
+                        try (var weights = count.executeQuery()) { if (!weights.next() || weights.getBigDecimal(1).compareTo(new java.math.BigDecimal("100")) != 0) throw new IllegalStateException("scheme indicator weights must total 100"); }
+                    }
+                    try (var update = c.prepareStatement("update performance_scheme set status='PUBLISHED',updated_at=current_timestamp(6) where id=?")) { update.setString(1, r.getString(1)); update.executeUpdate(); }
+                }
+            }
+            c.commit();
+        } catch (SQLException e) { throw new IllegalStateException("cannot publish performance scheme", e); }
+    }
+
     public record Scheme(String code, String name, String category, String status, String formulaVersion) { }
 }

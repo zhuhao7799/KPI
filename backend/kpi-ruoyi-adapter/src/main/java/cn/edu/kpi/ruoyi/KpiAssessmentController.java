@@ -177,6 +177,9 @@ public final class KpiAssessmentController {
         current.requireCurrent(); schemeRepository.updateDraft(code, input.name(), input.category()); return R.ok();
     }
 
+    @PostMapping("/schemes/{code}/publish")
+    public R<Void> publishScheme(@PathVariable String code) { current.requireCurrent(); schemeRepository.publishDraft(code); return R.ok(); }
+
     @PostMapping("/indicator-versions")
     public R<Void> publishIndicatorVersion(@RequestBody IndicatorVersionInput input) {
         var actor = current.requireCurrent();
