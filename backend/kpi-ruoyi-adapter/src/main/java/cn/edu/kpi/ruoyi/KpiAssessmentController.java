@@ -20,6 +20,7 @@ import cn.edu.kpi.domain.security.KpiPermission;
 import cn.edu.kpi.domain.security.KpiRole;
 import cn.edu.kpi.domain.submission.SubmissionState;
 import cn.edu.kpi.infrastructure.jdbc.JdbcKpiCatalog;
+import cn.edu.kpi.infrastructure.jdbc.JdbcIndicatorVersionRepository;
 import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceLookup;
 import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceRepository;
 import cn.edu.kpi.application.assessment.AssessmentSnapshotReader;
