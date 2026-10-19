@@ -7,6 +7,9 @@ export const getCurrentKpiActor = (): AxiosPromise<KpiActorVO> => request({ url:
 export const createCycle = (data: AssessmentCycleVO) => request({ url: '/kpi/cycles', method: 'post', data });
 export const replaceCycleUnits = (cycleCode: string, data: OrganizationUnitVO[]) => request({ url: `/kpi/cycles/${cycleCode}/units`, method: 'put', data });
 export const lockCycle = (cycleCode: string) => request({ url: `/kpi/cycles/${cycleCode}/lock`, method: 'post' });
+export interface CycleSchemeVO { category: string; schemeCode: string; schemeName: string; indicatorVersion: string; status: string; }
+export const listCycleSchemes = (code: string): AxiosPromise<CycleSchemeVO[]> => request({ url: `/kpi/cycles/${code}/schemes`, method: 'get' });
+export const bindCycleScheme = (code: string, data: { category: string; schemeCode: string; indicatorVersion: string }) => request({ url: `/kpi/cycles/${code}/schemes`, method: 'post', data });
 export const listOrganizationUnits = (cycleCode: string): AxiosPromise<OrganizationUnitVO[]> => request({ url: '/kpi/units', method: 'get', params: { cycleCode } });
 export const getIndicatorVersion = (version: string): AxiosPromise<IndicatorVersionInput> => request({ url: `/kpi/indicator-versions/${version}`, method: 'get' });
 export const listIndicatorVersions = (): AxiosPromise<IndicatorVersionSummary[]> => request({ url: '/kpi/indicator-versions', method: 'get' });
