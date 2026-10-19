@@ -35,6 +35,7 @@ public final class JdbcPerformanceSchemeRepository {
                 try (var r = check.executeQuery()) {
                     if (!r.next()) throw new IllegalArgumentException("performance scheme not found: " + code);
                     if (!"DRAFT".equals(r.getString(2))) throw new IllegalStateException("only draft schemes can be deleted");
+                    try (var locked = c.prepareStatement("select count(*) from assessment_cycle_scheme b join assessment_cycle c on c.id=b.assessment_cycle_id where b.scheme_id=? and c.state='LOCKED'")) { locked.setString(1, r.getString(1)); try (var lr=locked.executeQuery()) { lr.next(); if (lr.getInt(1)>0) throw new IllegalStateException("scheme is referenced by a locked assessment cycle"); } }
                     try (var items = c.prepareStatement("delete from performance_scheme_indicator where scheme_id=?")) { items.setString(1, r.getString(1)); items.executeUpdate(); }
                     try (var scheme = c.prepareStatement("delete from performance_scheme where id=?")) { scheme.setString(1, r.getString(1)); scheme.executeUpdate(); }
                 }

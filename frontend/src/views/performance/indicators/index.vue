@@ -12,6 +12,8 @@
       </div>
       <div v-if="selectedSummary?.status === 'DRAFT'" class="version-actions"><el-button type="primary" @click="openEdit">编辑草稿</el-button><el-button type="success" @click="publishDraftVersion">发布草稿</el-button><el-button type="danger" @click="removeDraft">删除草稿</el-button></div>
       <div v-else-if="selectedSummary?.status === 'PUBLISHED'" class="version-actions"><el-button type="primary" @click="cloneVersion">复制为新版本</el-button><el-tag type="info">已发布版本只读</el-tag></div>
+      <el-alert v-if="references.length" class="mt-4" type="warning" :closable="false" title="当前版本存在业务引用，不能删除或直接变更" />
+      <el-table v-if="references.length" :data="references" border class="mt-4"><el-table-column prop="type" label="引用类型" width="180" /><el-table-column prop="code" label="引用对象" /><el-table-column prop="status" label="状态" width="120" /></el-table>
       <el-table v-if="version" :data="version.indicators" border class="mt-4">
         <el-table-column prop="code" label="指标编码" width="180" />
         <el-table-column prop="name" label="指标名称" min-width="220" />
@@ -47,7 +49,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { cloneIndicatorVersion, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
+import { cloneIndicatorVersion, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorReferences, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
 import type { IndicatorVersionInput, IndicatorVersionSummary } from '@/api/kpi/types';
 
 const version = ref<IndicatorVersionInput>();
@@ -57,6 +59,7 @@ const selectedSummary = computed(() => versions.value.find(item => item.version 
 const dialogVisible = ref(false);
 const saving = ref(false);
 const form = reactive<IndicatorVersionInput>({ version: '', formulaVersion: 'weighted-score-v1', scoreScale: 4, indicators: [] });
+const references = ref<Array<{ type: string; code: string; status: string }>>([]);
 
 async function load() {
   try {
@@ -65,7 +68,7 @@ async function load() {
     await selectVersion(selectedVersion.value);
   } catch { version.value = undefined; }
 }
-async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); version.value = summary?.status === 'DRAFT' ? { version: code, formulaVersion: summary.formulaVersion, scoreScale: summary.scoreScale, indicators: (await getIndicatorVersionItems(code)).data || [] } : (await getIndicatorVersion(code)).data; }
+async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); references.value = (await listIndicatorReferences(code)).data || []; version.value = summary?.status === 'DRAFT' ? { version: code, formulaVersion: summary.formulaVersion, scoreScale: summary.scoreScale, indicators: (await getIndicatorVersionItems(code)).data || [] } : (await getIndicatorVersion(code)).data; }
 function openCreate() { form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = [{ code: '', name: '', weight: 0, maximumScore: 100 }]; dialogVisible.value = true; }
 function openEdit() { if (!version.value) return; form.version = version.value.version; form.formulaVersion = version.value.formulaVersion; form.scoreScale = version.value.scoreScale; form.indicators = version.value.indicators.map(item => ({ ...item })); dialogVisible.value = true; }
 async function saveDraft() {
