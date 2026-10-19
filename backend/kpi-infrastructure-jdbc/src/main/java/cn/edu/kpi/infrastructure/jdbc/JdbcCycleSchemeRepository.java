@@ -31,5 +31,12 @@ public final class JdbcCycleSchemeRepository {
             return List.copyOf(errors);
         } catch(SQLException e){throw new IllegalStateException("cannot validate cycle scheme",e);}
     }
+
+    public FillingContext resolve(String cycleCode, String unitId) {
+        var sql="select c.cycle_code,u.external_unit_id,u.unit_name,u.unit_category,s.scheme_code,s.scheme_name,v.version_code from organization_unit_snapshot u join assessment_cycle c on c.id=u.assessment_cycle_id join assessment_cycle_scheme b on b.assessment_cycle_id=c.id and b.organization_category=u.unit_category join performance_scheme s on s.id=b.scheme_id join indicator_version v on v.id=b.indicator_version_id and v.status='PUBLISHED' where c.cycle_code=? and u.external_unit_id=? and b.status in ('DRAFT','PUBLISHED','LOCKED')";
+        try(var c=dataSource.getConnection();var s=c.prepareStatement(sql)){s.setString(1,cycleCode);s.setString(2,unitId);try(var r=s.executeQuery()){if(!r.next())throw new IllegalArgumentException("no scheme configured for cycle and unit");return new FillingContext(r.getString(1),r.getString(2),r.getString(3),r.getString(4),r.getString(5),r.getString(6),r.getString(7));}}
+        catch(SQLException e){throw new IllegalStateException("cannot resolve filling context",e);}
+    }
+    public record FillingContext(String cycleCode,String unitId,String unitName,String category,String schemeCode,String schemeName,String indicatorVersion){}
     public record Binding(String category,String schemeCode,String schemeName,String indicatorVersion,String status){}
 }

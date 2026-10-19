@@ -191,6 +191,9 @@ public final class KpiAssessmentController {
     @PostMapping("/cycles/{code}/schemes/validate")
     public R<List<String>> validateCycleSchemes(@PathVariable String code) { current.requireCurrent(); return R.ok(cycleSchemeRepository.validate(code)); }
 
+    @GetMapping("/filling/context")
+    public R<JdbcCycleSchemeRepository.FillingContext> fillingContext(@RequestParam String cycleCode, @RequestParam String unitId) { current.requireCurrent(); return R.ok(cycleSchemeRepository.resolve(cycleCode, unitId)); }
+
     @GetMapping("/schemes/{code}/indicators")
     public R<List<JdbcPerformanceSchemeRepository.SchemeIndicator>> schemeIndicators(@PathVariable String code) { current.requireCurrent(); return R.ok(schemeRepository.indicators(code)); }
 
