@@ -97,6 +97,7 @@ public final class KpiDemoServer {
                 String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 String target = jsonString(body, "target");
                 if (!"SUBMITTED".equals(target)) throw new IllegalArgumentException("demo flow only supports submission");
+                STORE.resubmit(submissionId);
                 json(exchange, 200, "{\"id\":\"" + escape(submissionId) + "\",\"state\":\"SUBMITTED\"}");
             } catch (IllegalArgumentException error) { json(exchange, 400, "{\"error\":\"" + escape(error.getMessage()) + "\"}"); }
             return;

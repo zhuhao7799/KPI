@@ -41,6 +41,18 @@ public final class SubmissionStore {
         append(evidenceLinks, "{\"evidenceId\":\"" + escape(evidenceId) + "\",\"submissionId\":\"" + escape(submissionId) + "\",\"indicatorCode\":\"" + escape(indicatorCode) + "\"}" + System.lineSeparator());
     }
     public synchronized String createReviewTask(String submissionId) { String id=UUID.randomUUID().toString(); append(tasks,"{\"id\":\""+id+"\",\"submissionId\":\""+submissionId+"\",\"type\":\"REVIEW\",\"assigneeId\":\"local-reviewer\",\"state\":\"PENDING\"}" + System.lineSeparator()); return id; }
+    public synchronized void resubmit(String submissionId) {
+        var current = read(submissions, "cannot read assessment submissions");
+        var updated = new java.util.ArrayList<String>(); boolean found = false; boolean returned = false;
+        for (String submission : current) {
+            if (!hasId(submission, submissionId)) { updated.add(submission); continue; }
+            found = true; returned = submission.contains("\"state\":\"RETURNED\"");
+            updated.add(returned ? submission.replace("\"state\":\"RETURNED\"", "\"state\":\"SUBMITTED\"") : submission);
+        }
+        if (!found) throw new IllegalArgumentException("unknown submission: " + submissionId);
+        write(submissions, updated);
+        if (returned) createReviewTask(submissionId);
+    }
     public synchronized List<String> listTasks() { return read(tasks, "cannot read approval tasks"); }
     public synchronized String completeReviewTask(String taskId, boolean approved, String comment) {
         var currentTasks = read(tasks, "cannot read approval tasks");
