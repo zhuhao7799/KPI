@@ -21,5 +21,15 @@ public final class JdbcCycleSchemeRepository {
         try(var c=dataSource.getConnection();var s=c.prepareStatement(sql)){s.setString(1, UUID.randomUUID().toString());s.setString(2,category);s.setString(3,operator);s.setString(4,schemeCode);s.setString(5,versionCode);s.setString(6,cycleCode);if(s.executeUpdate()==0) throw new IllegalStateException("cycle, scheme or version unavailable");}
         catch(SQLException e){throw new IllegalStateException("cannot bind cycle scheme",e);}
     }
+
+    public List<String> validate(String cycleCode) {
+        var errors = new ArrayList<String>();
+        try (var c=dataSource.getConnection()) {
+            try (var s=c.prepareStatement("select count(*) from organization_unit_snapshot u join assessment_cycle c on c.id=u.assessment_cycle_id where c.cycle_code=?")) { s.setString(1,cycleCode); try(var r=s.executeQuery()){r.next();if(r.getInt(1)==0) errors.add("未配置组织单位");} }
+            try (var s=c.prepareStatement("select organization_category from assessment_cycle_scheme b join assessment_cycle c on c.id=b.assessment_cycle_id where c.cycle_code=? and b.status='DRAFT'")) { s.setString(1,cycleCode); try(var r=s.executeQuery()){var categories=new java.util.HashSet<String>();while(r.next())categories.add(r.getString(1));if(!categories.contains("二级学院"))errors.add("未绑定二级学院方案");if(!categories.contains("职能部门"))errors.add("未绑定职能部门方案");} }
+            try (var s=c.prepareStatement("select count(*) from assessment_cycle_scheme b join assessment_cycle c on c.id=b.assessment_cycle_id join indicator_version v on v.id=b.indicator_version_id where c.cycle_code=? and v.status='PUBLISHED'")) { s.setString(1,cycleCode); try(var r=s.executeQuery()){r.next();if(r.getInt(1)==0)errors.add("未绑定已发布指标版本");} }
+            return List.copyOf(errors);
+        } catch(SQLException e){throw new IllegalStateException("cannot validate cycle scheme",e);}
+    }
     public record Binding(String category,String schemeCode,String schemeName,String indicatorVersion,String status){}
 }
