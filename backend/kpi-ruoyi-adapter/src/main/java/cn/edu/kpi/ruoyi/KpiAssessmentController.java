@@ -22,6 +22,7 @@ import cn.edu.kpi.domain.submission.SubmissionState;
 import cn.edu.kpi.infrastructure.jdbc.JdbcKpiCatalog;
 import cn.edu.kpi.infrastructure.jdbc.JdbcIndicatorVersionRepository;
 import cn.edu.kpi.infrastructure.jdbc.JdbcPerformanceSchemeRepository;
+import cn.edu.kpi.infrastructure.jdbc.JdbcCycleSchemeRepository;
 import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceLookup;
 import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceRepository;
 import cn.edu.kpi.application.assessment.AssessmentSnapshotReader;
@@ -53,6 +54,7 @@ public final class KpiAssessmentController {
     private final JdbcKpiCatalog catalog;
     private final JdbcIndicatorVersionRepository indicatorRepository;
     private final JdbcPerformanceSchemeRepository schemeRepository;
+    private final JdbcCycleSchemeRepository cycleSchemeRepository;
     private final CycleAdministrationService cycles;
     private final IndicatorVersionPublicationService publication;
     private final AssessmentSnapshotReader snapshots;
@@ -68,7 +70,7 @@ public final class KpiAssessmentController {
 
     public KpiAssessmentController(KpiCurrentActor current, KpiIdentityResolver identities, Clock kpiClock,
                                    KpiGrantAdministrationService grants,
-                                   KpiScopeAuthorizationService scope, JdbcKpiCatalog catalog, JdbcIndicatorVersionRepository indicatorRepository, JdbcPerformanceSchemeRepository schemeRepository,
+                                   KpiScopeAuthorizationService scope, JdbcKpiCatalog catalog, JdbcIndicatorVersionRepository indicatorRepository, JdbcPerformanceSchemeRepository schemeRepository, JdbcCycleSchemeRepository cycleSchemeRepository,
                                    CycleAdministrationService cycles, IndicatorVersionPublicationService publication,
                                    AssessmentSnapshotReader snapshots, AssessmentSubmissionService submissions,
                                    SubmissionContextReader contexts, ResultQueryService results,
@@ -76,7 +78,7 @@ public final class KpiAssessmentController {
                                    EvidenceAccessService evidence, JdbcEvidenceRepository evidenceRepository,
                                    JdbcEvidenceLookup evidenceLookup, PrivateEvidenceStorage evidenceStorage) {
         this.current = current; this.identities = identities; this.clock = kpiClock; this.grants = grants;
-        this.scope = scope; this.catalog = catalog; this.indicatorRepository = indicatorRepository; this.schemeRepository = schemeRepository; this.cycles = cycles;
+        this.scope = scope; this.catalog = catalog; this.indicatorRepository = indicatorRepository; this.schemeRepository = schemeRepository; this.cycleSchemeRepository = cycleSchemeRepository; this.cycles = cycles;
         this.publication = publication; this.snapshots = snapshots; this.submissions = submissions;
         this.contexts = contexts; this.results = results; this.tasks = tasks; this.taskRepository = taskRepository;
         this.evidence = evidence; this.evidenceRepository = evidenceRepository;
@@ -179,6 +181,12 @@ public final class KpiAssessmentController {
 
     @PostMapping("/schemes/{code}/publish")
     public R<Void> publishScheme(@PathVariable String code) { current.requireCurrent(); schemeRepository.publishDraft(code); return R.ok(); }
+
+    @GetMapping("/cycles/{code}/schemes")
+    public R<List<JdbcCycleSchemeRepository.Binding>> cycleSchemes(@PathVariable String code) { current.requireCurrent(); return R.ok(cycleSchemeRepository.list(code)); }
+
+    @PostMapping("/cycles/{code}/schemes")
+    public R<Void> bindCycleScheme(@PathVariable String code, @RequestBody CycleSchemeInput input) { var actor=current.requireCurrent(); cycleSchemeRepository.bind(code,input.category(),input.schemeCode(),input.indicatorVersion(),actor.userId()); return R.ok(); }
 
     @GetMapping("/schemes/{code}/indicators")
     public R<List<JdbcPerformanceSchemeRepository.SchemeIndicator>> schemeIndicators(@PathVariable String code) { current.requireCurrent(); return R.ok(schemeRepository.indicators(code)); }
@@ -326,6 +334,7 @@ public final class KpiAssessmentController {
     public record IndicatorVersionView(String version, String formulaVersion, int scoreScale, List<IndicatorVersion.Indicator> indicators) { }
     public record SchemeInput(String code, String name, String category) { }
     public record SchemeIndicatorInput(String code, String name, BigDecimal weight, BigDecimal maximumScore) { }
+    public record CycleSchemeInput(String category, String schemeCode, String indicatorVersion) { }
     public record ScoreInput(String cycleCode, String unitId, String indicatorVersion, List<ScoreItemInput> scores) { }
     public record ScoreItemInput(String indicatorCode, BigDecimal rawScore, List<String> evidenceIds) { }
     public record ScorePreviewView(BigDecimal totalScore, List<ScoreDetailView> details) { }
