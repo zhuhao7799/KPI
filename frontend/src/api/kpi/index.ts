@@ -16,6 +16,10 @@ export const createPerformanceScheme = (data: { code: string; name: string; cate
 export const deletePerformanceScheme = (code: string) => request({ url: `/kpi/schemes/${code}`, method: 'delete' });
 export const updatePerformanceScheme = (code: string, data: { name: string; category: string }) => request({ url: `/kpi/schemes/${code}`, method: 'put', data });
 export const publishPerformanceScheme = (code: string) => request({ url: `/kpi/schemes/${code}/publish`, method: 'post' });
+export interface SchemeIndicatorVO { code: string; name: string; weight: number; maximumScore: number; }
+export const listSchemeIndicators = (code: string): AxiosPromise<SchemeIndicatorVO[]> => request({ url: `/kpi/schemes/${code}/indicators`, method: 'get' });
+export const addSchemeIndicator = (code: string, data: SchemeIndicatorVO) => request({ url: `/kpi/schemes/${code}/indicators`, method: 'post', data });
+export const deleteSchemeIndicator = (scheme: string, indicator: string) => request({ url: `/kpi/schemes/${scheme}/indicators/${indicator}`, method: 'delete' });
 export const publishIndicatorVersion = (data: IndicatorVersionInput) => request({ url: '/kpi/indicator-versions', method: 'post', data });
 export const previewScore = (data: ScorePreviewRequest): AxiosPromise<ScorePreviewVO> => request({ url: '/kpi/submissions/preview', method: 'post', data });
 export const saveSubmission = (data: ScorePreviewRequest): AxiosPromise<SubmissionVO> => request({ url: '/kpi/submissions', method: 'post', data });
