@@ -83,6 +83,18 @@ public final class JdbcPerformanceSchemeRepository {
         catch (SQLException e) { throw new IllegalStateException("cannot add scheme indicator", e); }
     }
 
+    public void updateIndicator(String schemeCode, String indicatorCode, String name, java.math.BigDecimal weight, java.math.BigDecimal maximumScore) {
+        var sql = "update performance_scheme_indicator i join performance_scheme s on s.id=i.scheme_id set i.indicator_name=?,i.weight=?,i.maximum_score=? where s.scheme_code=? and s.status='DRAFT' and i.indicator_code=?";
+        try (var c = dataSource.getConnection(); var s = c.prepareStatement(sql)) { s.setString(1, name); s.setBigDecimal(2, weight); s.setBigDecimal(3, maximumScore); s.setString(4, schemeCode); s.setString(5, indicatorCode); if (s.executeUpdate() == 0) throw new IllegalStateException("draft indicator not found"); }
+        catch (SQLException e) { throw new IllegalStateException("cannot update scheme indicator", e); }
+    }
+
+    public void deleteIndicator(String schemeCode, String indicatorCode) {
+        var sql = "delete i from performance_scheme_indicator i join performance_scheme s on s.id=i.scheme_id where s.scheme_code=? and s.status='DRAFT' and i.indicator_code=?";
+        try (var c = dataSource.getConnection(); var s = c.prepareStatement(sql)) { s.setString(1, schemeCode); s.setString(2, indicatorCode); if (s.executeUpdate() == 0) throw new IllegalStateException("draft indicator not found"); }
+        catch (SQLException e) { throw new IllegalStateException("cannot delete scheme indicator", e); }
+    }
+
     public record SchemeIndicator(String code, String name, java.math.BigDecimal weight, java.math.BigDecimal maximumScore) { }
 
     public record Scheme(String code, String name, String category, String status, String formulaVersion) { }

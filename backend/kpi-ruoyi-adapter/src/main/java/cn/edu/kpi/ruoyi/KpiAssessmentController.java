@@ -186,6 +186,12 @@ public final class KpiAssessmentController {
     @PostMapping("/schemes/{code}/indicators")
     public R<Void> addSchemeIndicator(@PathVariable String code, @RequestBody SchemeIndicatorInput input) { current.requireCurrent(); schemeRepository.addIndicator(code, input.code(), input.name(), input.weight(), input.maximumScore()); return R.ok(); }
 
+    @PutMapping("/schemes/{code}/indicators/{indicatorCode}")
+    public R<Void> updateSchemeIndicator(@PathVariable String code, @PathVariable String indicatorCode, @RequestBody SchemeIndicatorInput input) { current.requireCurrent(); schemeRepository.updateIndicator(code, indicatorCode, input.name(), input.weight(), input.maximumScore()); return R.ok(); }
+
+    @DeleteMapping("/schemes/{code}/indicators/{indicatorCode}")
+    public R<Void> deleteSchemeIndicator(@PathVariable String code, @PathVariable String indicatorCode) { current.requireCurrent(); schemeRepository.deleteIndicator(code, indicatorCode); return R.ok(); }
+
     @PostMapping("/indicator-versions")
     public R<Void> publishIndicatorVersion(@RequestBody IndicatorVersionInput input) {
         var actor = current.requireCurrent();
