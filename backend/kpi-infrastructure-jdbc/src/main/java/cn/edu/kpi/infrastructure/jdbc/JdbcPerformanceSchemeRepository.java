@@ -60,9 +60,9 @@ public final class JdbcPerformanceSchemeRepository {
                 try (var r = check.executeQuery()) {
                     if (!r.next()) throw new IllegalArgumentException("performance scheme not found: " + code);
                     if (!"DRAFT".equals(r.getString(2))) throw new IllegalStateException("only draft schemes can be published");
-                    try (var count = c.prepareStatement("select coalesce(sum(weight),0) from performance_scheme_indicator where scheme_id=?")) {
+                    try (var count = c.prepareStatement("select count(*) from performance_scheme_indicator where scheme_id=?")) {
                         count.setString(1, r.getString(1));
-                        try (var weights = count.executeQuery()) { if (!weights.next() || weights.getBigDecimal(1).compareTo(new java.math.BigDecimal("100")) != 0) throw new IllegalStateException("scheme indicator weights must total 100"); }
+                        try (var items = count.executeQuery()) { if (!items.next() || items.getInt(1) == 0) throw new IllegalStateException("scheme must contain at least one indicator"); }
                     }
                     try (var update = c.prepareStatement("update performance_scheme set status='PUBLISHED',updated_at=current_timestamp(6) where id=?")) { update.setString(1, r.getString(1)); update.executeUpdate(); }
                 }
