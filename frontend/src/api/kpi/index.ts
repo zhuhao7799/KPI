@@ -14,7 +14,14 @@ export const validateCycleSchemes = (code: string): AxiosPromise<string[]> => re
 export const listOrganizationUnits = (cycleCode: string): AxiosPromise<OrganizationUnitVO[]> => request({ url: '/kpi/units', method: 'get', params: { cycleCode } });
 export const getIndicatorVersion = (version: string): AxiosPromise<IndicatorVersionInput> => request({ url: `/kpi/indicator-versions/${version}`, method: 'get' });
 export const getIndicatorVersionItems = (version: string): AxiosPromise<IndicatorItemInput[]> => request({ url: `/kpi/indicator-versions/${version}/items`, method: 'get' });
+export const addIndicatorItem = (version: string, data: IndicatorItemInput) => request({ url: `/kpi/indicator-versions/${version}/items`, method: 'post', data });
+export const updateIndicatorItem = (version: string, code: string, data: IndicatorItemInput) => request({ url: `/kpi/indicator-versions/${version}/items/${code}`, method: 'put', data });
+export const deleteIndicatorItem = (version: string, code: string) => request({ url: `/kpi/indicator-versions/${version}/items/${code}`, method: 'delete' });
 export const listIndicatorVersions = (): AxiosPromise<IndicatorVersionSummary[]> => request({ url: '/kpi/indicator-versions', method: 'get' });
+export interface IndicatorSystemVO { code: string; name: string; scope?: string; ownerId?: string; status?: string; description?: string; }
+export const listIndicatorSystems = (): AxiosPromise<IndicatorSystemVO[]> => request({ url: '/kpi/indicator-systems', method: 'get' });
+export const saveIndicatorSystem = (data: IndicatorSystemVO) => request({ url: '/kpi/indicator-systems', method: 'post', data });
+export const deleteIndicatorSystem = (code: string) => request({ url: `/kpi/indicator-systems/${code}`, method: 'delete' });
 export const saveIndicatorDraft = (data: IndicatorVersionInput) => request({ url: '/kpi/indicator-versions/draft', method: 'post', data });
 export const deleteIndicatorDraft = (version: string) => request({ url: `/kpi/indicator-versions/${version}/draft`, method: 'delete' });
 export const publishIndicatorDraft = (version: string) => request({ url: `/kpi/indicator-versions/${version}/publish`, method: 'post' });
@@ -23,6 +30,7 @@ export const listIndicatorReferences = (version: string) => request({ url: `/kpi
 export const listIndicatorAudit = (version: string) => request({ url: `/kpi/indicator-versions/${version}/audit`, method: 'get' });
 export const compareIndicatorVersions = (from: string, to: string) => request({ url: '/kpi/indicator-versions/compare', method: 'get', params: { from, to } });
 export const archiveIndicatorVersion = (version: string) => request({ url: `/kpi/indicator-versions/${version}/archive`, method: 'post' });
+export const withdrawIndicatorVersion = (version: string) => request({ url: `/kpi/indicator-versions/${version}/withdraw`, method: 'post' });
 export interface PerformanceSchemeVO { code: string; name: string; category: string; status: string; formulaVersion: string; indicatorVersion: string; }
 export const listPerformanceSchemes = (): AxiosPromise<PerformanceSchemeVO[]> => request({ url: '/kpi/schemes', method: 'get' });
 export const createPerformanceScheme = (data: { code: string; name: string; category: string; indicatorVersion: string }) => request({ url: '/kpi/schemes', method: 'post', data });

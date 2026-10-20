@@ -18,4 +18,4 @@ Get-ChildItem (Join-Path $repo 'backend/kpi-storage/migrations') -Filter 'V*.sql
   & $Mysql -u $RootUser $Database -e ('SOURCE "{0}";' -f $_.FullName)
 }
 Remove-Item Env:MYSQL_PWD
-Write-Host "MySQL 初始化完成：$Database（RuoYi 基础表 + KPI V1-V7）"
+Write-Host "MySQL 初始化完成：$Database（RuoYi 基础表 + KPI V1-V12）"

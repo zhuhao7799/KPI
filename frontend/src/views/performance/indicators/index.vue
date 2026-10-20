@@ -1,18 +1,21 @@
 <template>
-  <div class="app-container indicator-page">
+  <div class="app-container indicator-page" :class="{ 'detail-page': detailMode }">
+    <input ref="fileInput" type="file" accept=".csv,text/csv" hidden @change="importCsv" />
     <el-card shadow="never">
       <template #header>
-        <div class="toolbar"><span>指标体系管理</span><div><el-button v-if="versions.length > 1" @click="compareVisible = true">版本对比</el-button><el-button type="primary" @click="openCreate">新建版本</el-button></div></div>
+        <div class="toolbar"><div><div class="eyebrow">KPI GOVERNANCE</div><span>{{ detailMode ? '指标版本明细' : '指标体系管理' }}</span><p>{{ detailMode ? `维护 ${selectedVersion} 的指标快照和评分配置` : '统一维护考核指标版本、评分规则和发布状态' }}</p></div><div class="toolbar-actions"><el-button v-if="detailMode" plain @click="router.push('/performance/indicators')">返回版本列表</el-button><el-button v-if="!detailMode && versions.length > 1" plain @click="compareVisible = true">版本对比</el-button><el-button v-if="!detailMode" type="primary" @click="openCreate">新建版本</el-button></div></div>
       </template>
       <el-alert title="已发布版本会作为填报和评分的只读快照，发布后不允许直接修改。" type="info" show-icon :closable="false" />
-      <div v-if="versions.length" class="version-tabs">
-        <el-radio-group v-model="selectedVersion" @change="selectVersion">
-          <el-radio-button v-for="item in versions" :key="item.version" :value="item.version">{{ item.version }} · {{ item.status }}</el-radio-button>
-        </el-radio-group>
-      </div>
-      <div v-if="selectedSummary?.status === 'DRAFT'" class="version-actions"><el-button type="primary" @click="openEdit">编辑草稿</el-button><el-button type="success" @click="publishDraftVersion">发布草稿</el-button><el-button type="danger" @click="removeDraft">删除草稿</el-button><el-button @click="auditVisible = true">操作记录</el-button></div>
-      <div v-else-if="selectedSummary?.status === 'PUBLISHED'" class="version-actions"><el-button type="primary" @click="cloneVersion">复制为新版本</el-button><el-button type="warning" @click="archiveVersion">归档版本</el-button><el-button @click="auditVisible = true">操作记录</el-button><el-tag type="info">已发布版本只读</el-tag></div>
-      <div v-else-if="selectedSummary?.status === 'ARCHIVED'" class="version-actions"><el-button @click="auditVisible = true">操作记录</el-button><el-tag type="info">已归档版本只读</el-tag></div>
+      <div v-if="versions.length && !detailMode" class="summary-grid"><div class="summary-card"><span>版本总数</span><strong>{{ versions.length }}</strong><small>全部指标版本</small></div><div class="summary-card"><span>当前版本</span><strong>{{ selectedVersion || '—' }}</strong><small>{{ selectedSummary?.status || '未选择' }}</small></div><div class="summary-card"><span>指标数量</span><strong>{{ version?.indicators.length || 0 }}</strong><small>当前版本明细</small></div><div class="summary-card"><span>权重合计</span><strong>{{ totalWeight.toFixed(2) }}%</strong><small>仅作汇总参考</small></div></div>
+      <el-table v-if="versions.length && !detailMode" :data="versions" class="mt-4 version-table" highlight-current-row>
+        <el-table-column prop="version" label="版本编码" width="180" />
+        <el-table-column prop="status" label="状态" width="120" />
+        <el-table-column label="指标数量" width="110"><template #default="{ row }">{{ row.version === selectedVersion ? version?.indicators.length || 0 : '—' }}</template></el-table-column>
+        <el-table-column prop="publishedAt" label="发布时间" min-width="180" />
+        <el-table-column label="操作" width="280"><template #default="{ row }"><el-button link type="primary" @click.stop="openDetail(row.version)">查看明细</el-button><el-button v-if="row.status === 'PUBLISHED'" link @click.stop="cloneVersionFor(row.version)">复制版本</el-button><el-button v-if="row.status === 'DRAFT'" link type="danger" @click.stop="removeDraftFor(row.version)">删除</el-button></template></el-table-column>
+      </el-table>
+      <el-divider v-if="detailMode && version" content-position="left">版本明细</el-divider>
+      <div v-if="version" class="version-header"><div><strong>{{ version.version }}</strong><el-tag class="ml-2" :type="selectedSummary?.status === 'PUBLISHED' ? 'success' : selectedSummary?.status === 'ARCHIVED' ? 'info' : 'warning'">{{ selectedSummary?.status }}</el-tag><p>评分公式：{{ version.formulaVersion }}　评分精度：{{ version.scoreScale }}　权重：{{ totalWeight.toFixed(2) }}%</p></div><div class="version-actions"><el-button v-if="selectedSummary?.status === 'DRAFT'" plain @click="openEdit">编辑</el-button><el-button v-if="selectedSummary?.status === 'DRAFT'" type="primary" @click="openIndicatorEditor()">新增指标</el-button><el-button plain @click="downloadTemplate">下载模板</el-button><el-button plain @click="prepareDetailImport">导入</el-button><el-button plain @click="exportDetailCsv">导出</el-button><el-button v-if="selectedSummary?.status === 'DRAFT'" type="success" @click="publishDraftVersion">发布</el-button><el-button v-if="selectedSummary?.status === 'DRAFT'" type="danger" @click="removeDraft">删除</el-button><el-button v-if="selectedSummary?.status === 'PUBLISHED'" type="warning" @click="withdrawVersion">撤回发布</el-button><el-button v-if="selectedSummary?.status === 'PUBLISHED'" plain @click="archiveVersion">归档</el-button><el-button @click="auditVisible = true">操作记录</el-button></div></div>
       <el-alert v-if="references.length" class="mt-4" type="warning" :closable="false" title="当前版本存在业务引用，不能删除或直接变更" />
       <el-table v-if="references.length" :data="references" border class="mt-4"><el-table-column prop="type" label="引用类型" width="180" /><el-table-column prop="code" label="引用对象" /><el-table-column prop="status" label="状态" width="120" /></el-table>
       <div v-if="version" class="filters"><el-input v-model="keyword" clearable placeholder="搜索编码或名称" /><el-select v-model="categoryFilter" clearable placeholder="筛选分类"><el-option v-for="option in kpi_indicator_category" :key="option.value" :label="option.label" :value="option.value" /></el-select></div>
@@ -26,6 +29,7 @@
         <el-table-column prop="weight" label="权重" width="120"><template #default="{ row }">{{ row.weight }}%</template></el-table-column>
         <el-table-column prop="maximumScore" label="满分" width="120" />
         <el-table-column v-if="selectedSummary?.status === 'DRAFT'" label="排序" width="130"><template #default="{ row }"><el-button link @click.stop="moveIndicator(row, -1)">上移</el-button><el-button link @click.stop="moveIndicator(row, 1)">下移</el-button></template></el-table-column>
+      <el-table-column label="操作" width="140" fixed="right"><template #default="{ row }"><el-button link type="primary" @click.stop="openIndicatorEditorByCode(row.code)">编辑</el-button><el-button link type="danger" @click.stop="removeDetailIndicator(row)">删除</el-button></template></el-table-column>
       </el-table>
       <el-empty v-else description="暂无指标版本" />
     </el-card>
@@ -33,83 +37,106 @@
     <el-dialog v-model="compareVisible" title="指标版本差异" width="760px"><el-form inline><el-select v-model="compareFrom" placeholder="基准版本"><el-option v-for="item in versions" :key="`from-${item.version}`" :label="item.version" :value="item.version" /></el-select><el-select v-model="compareTo" placeholder="对比版本"><el-option v-for="item in versions" :key="`to-${item.version}`" :label="item.version" :value="item.version" /></el-select><el-button type="primary" @click="runCompare">比较</el-button></el-form><el-table :data="changes" border><el-table-column prop="type" label="变更类型" width="100" /><el-table-column prop="code" label="指标编码" /><el-table-column prop="fromName" label="基准版本" /><el-table-column prop="toName" label="对比版本" /></el-table></el-dialog>
     <el-dialog v-model="auditVisible" title="指标版本操作记录" width="720px"><el-table :data="audits" border><el-table-column prop="eventType" label="操作" width="120" /><el-table-column prop="actorId" label="操作人" width="180" /><el-table-column prop="occurredAt" label="时间" width="190" /><el-table-column prop="payload" label="详情" /></el-table></el-dialog>
 
-    <el-dialog v-model="dialogVisible" title="发布指标版本" width="680px">
+    <el-dialog v-model="dialogVisible" :title="editing ? '编辑指标版本明细' : createStep === 1 ? '新建指标版本' : '配置指标明细'" width="min(1080px, calc(100vw - 32px))">
+      <el-steps v-if="form.version === '' || createStep === 2" :active="createStep - 1" finish-status="success" class="create-steps"><el-step title="基本信息" description="定义版本和评分规则" /><el-step title="指标明细" description="添加指标并配置权重" /></el-steps>
       <el-form :model="form" label-width="110px">
-        <el-form-item label="版本编码"><el-input v-model="form.version" placeholder="例如：2027-v1" /></el-form-item>
-        <el-form-item label="评分公式"><el-input v-model="form.formulaVersion" /></el-form-item>
-        <el-form-item label="评分精度"><el-input-number v-model="form.scoreScale" :min="0" :max="8" /></el-form-item>
-        <el-form-item label="指标项">
+        <template v-if="editing || createStep === 1"><el-form-item label="版本编码"><el-input v-model="form.version" placeholder="例如：2027-v1" /></el-form-item><el-form-item label="评分公式"><el-input v-model="form.formulaVersion" /></el-form-item><el-form-item label="评分精度"><el-input-number v-model="form.scoreScale" :min="0" :max="8" /></el-form-item></template>
+        <el-form-item v-if="!editing && createStep === 1" label=""><el-alert title="保存基本信息后进入版本明细，再按需新增指标" type="info" :closable="false" /></el-form-item>
+        <el-form-item v-if="editing || createStep === 2" label="指标项">
           <div class="items">
-            <div v-for="(item, index) in form.indicators" :key="index" class="item-row">
-              <el-input v-model="item.code" placeholder="编码" />
-              <el-input v-model="item.name" placeholder="名称" />
-              <el-select v-model="item.category" placeholder="分类"><el-option v-for="option in kpi_indicator_category" :key="option.value" :label="option.label" :value="option.value" /></el-select>
-              <el-select v-model="item.indicatorType" placeholder="性质"><el-option v-for="option in kpi_indicator_type" :key="option.value" :label="option.label" :value="option.value" /></el-select>
-              <el-select v-model="item.measurementUnit" placeholder="单位"><el-option v-for="option in kpi_measurement_unit" :key="option.value" :label="option.label" :value="option.value" /></el-select>
-              <el-input-number v-model="item.weight" :min="0.01" :max="100" :precision="2" />
-              <el-input-number v-model="item.maximumScore" :min="1" :precision="2" />
-              <el-select v-model="item.scoringMethod" placeholder="评分方式"><el-option v-for="option in kpi_scoring_method" :key="option.value" :label="option.label" :value="option.value" /></el-select>
-              <el-checkbox v-model="item.evidenceRequired">需材料</el-checkbox>
-              <el-button text type="danger" @click="form.indicators.splice(index, 1)">删除</el-button>
-            </div>
-            <el-button plain @click="form.indicators.push({ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' })">新增指标</el-button>
-            <el-button plain @click="fileInput?.click()">导入 CSV</el-button><el-button plain @click="exportCsv">导出 CSV</el-button><input ref="fileInput" type="file" accept=".csv,text/csv" hidden @change="importCsv" />
+            <div class="indicator-section-head"><div><strong>指标项配置</strong><span>已添加 {{ form.indicators.length }} 项，权重合计 {{ form.indicators.reduce((sum, item) => sum + Number(item.weight || 0), 0).toFixed(2) }}%</span></div><div class="indicator-tools"><el-button type="primary" plain @click="openIndicatorEditor()">新增指标</el-button><el-button plain @click="downloadTemplate">下载模板</el-button><el-button plain @click="prepareDetailImport">导入 CSV</el-button><el-button plain @click="exportCsv">导出 CSV</el-button></div></div>
+            <el-table :data="form.indicators" border class="editor-indicator-table">
+              <el-table-column type="index" label="#" width="56" />
+              <el-table-column prop="code" label="指标编码" min-width="120" />
+              <el-table-column prop="name" label="指标名称" min-width="160" />
+              <el-table-column prop="category" label="分类" width="110" />
+              <el-table-column prop="weight" label="权重" width="90"><template #default="{ row }">{{ row.weight }}%</template></el-table-column>
+              <el-table-column label="操作" width="150" fixed="right"><template #default="{ row, $index }"><el-button link type="primary" @click="openIndicatorEditorByCode(row.code)">编辑</el-button><el-button link type="danger" @click="form.indicators.splice($index, 1)">删除</el-button></template></el-table-column>
+              <template #empty><el-empty description="暂无指标，请点击新增指标" /></template>
+            </el-table>
           </div>
         </el-form-item>
       </el-form>
-      <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="saveDraft">保存草稿</el-button></template>
+      <el-dialog v-model="indicatorEditorVisible" title="指标属性" width="680px" append-to-body>
+        <el-form :model="indicatorForm" label-width="100px" class="indicator-editor-form"><el-form-item label="指标编码"><el-input v-model="indicatorForm.code" placeholder="例如：goal" /></el-form-item><el-form-item label="指标名称"><el-input v-model="indicatorForm.name" placeholder="请输入指标名称" /></el-form-item><el-form-item label="指标分类"><el-select v-model="indicatorForm.category"><el-option v-for="option in kpi_indicator_category" :key="option.value" :label="option.label" :value="option.value" /></el-select></el-form-item><el-form-item label="指标性质"><el-select v-model="indicatorForm.indicatorType"><el-option v-for="option in kpi_indicator_type" :key="option.value" :label="option.label" :value="option.value" /></el-select></el-form-item><el-form-item label="计量单位"><el-select v-model="indicatorForm.measurementUnit"><el-option v-for="option in kpi_measurement_unit" :key="option.value" :label="option.label" :value="option.value" /></el-select></el-form-item><el-form-item label="权重"><el-input-number v-model="indicatorForm.weight" :min="0.01" :max="100" :precision="2" /></el-form-item><el-form-item label="满分"><el-input-number v-model="indicatorForm.maximumScore" :min="1" :precision="2" /></el-form-item><el-form-item label="评分方式"><el-select v-model="indicatorForm.scoringMethod"><el-option v-for="option in kpi_scoring_method" :key="option.value" :label="option.label" :value="option.value" /></el-select></el-form-item><el-form-item label="佐证材料"><el-checkbox v-model="indicatorForm.evidenceRequired">需要材料</el-checkbox></el-form-item><el-form-item label="指标说明"><el-input v-model="indicatorForm.description" type="textarea" :rows="3" /></el-form-item></el-form>
+        <template #footer><el-button @click="indicatorEditorVisible = false">取消</el-button><el-button type="primary" @click="saveIndicatorEditor">保存指标</el-button></template>
+      </el-dialog>
+      <template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button v-if="!editing && createStep === 2" @click="createStep = 1">上一步</el-button><el-button v-if="!editing && createStep === 1" type="primary" :loading="saving" @click="proceedCreate">保存基本信息</el-button><el-button v-if="editing || createStep === 2" type="primary" :loading="saving" @click="saveDraft">保存草稿</el-button></template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, toRefs } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { archiveIndicatorVersion, cloneIndicatorVersion, compareIndicatorVersions, deleteIndicatorDraft, getIndicatorVersion, getIndicatorVersionItems, listIndicatorAudit, listIndicatorReferences, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft } from '@/api/kpi';
+import { archiveIndicatorVersion, cloneIndicatorVersion, compareIndicatorVersions, deleteIndicatorDraft, deleteIndicatorItem, getIndicatorVersion, getIndicatorVersionItems, listIndicatorAudit, listIndicatorReferences, listIndicatorVersions, publishIndicatorDraft, saveIndicatorDraft, withdrawIndicatorVersion } from '@/api/kpi';
 import { useDict } from '@/utils/dict';
 import type { IndicatorVersionInput, IndicatorVersionSummary } from '@/api/kpi/types';
 
 const version = ref<IndicatorVersionInput>();
+const route = useRoute();
+const router = useRouter();
+const detailMode = computed(() => route.path.endsWith('/detail'));
 const versions = ref<IndicatorVersionSummary[]>([]);
 const selectedVersion = ref('2026-v1');
 const selectedSummary = computed(() => versions.value.find(item => item.version === selectedVersion.value));
 const dialogVisible = ref(false);
 const saving = ref(false);
+const createStep = ref(1);
+const editing = ref(false);
 const form = reactive<IndicatorVersionInput>({ version: '', formulaVersion: 'weighted-score-v1', scoreScale: 4, indicators: [] });
+const indicatorEditorVisible = ref(false); const editingIndicatorIndex = ref(-1); const indicatorForm = reactive<IndicatorVersionInput['indicators'][number]>({ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' });
 const references = ref<Array<{ type: string; code: string; status: string }>>([]);
 const detailVisible = ref(false); const detailItem = ref<IndicatorVersionInput['indicators'][number]>();
 const fileInput = ref<HTMLInputElement>();
 const keyword = ref(''); const categoryFilter = ref(''); const compareVisible = ref(false); const compareFrom = ref(''); const compareTo = ref(''); const changes = ref<Array<{ type: string; code: string; fromName?: string; toName?: string }>>([]); const auditVisible = ref(false); const audits = ref<Array<{ eventType: string; actorId: string; occurredAt: string; payload: string }>>([]);
 const filteredIndicators = computed(() => (version.value?.indicators || []).filter(item => (!keyword.value || `${item.code}${item.name}`.toLowerCase().includes(keyword.value.toLowerCase())) && (!categoryFilter.value || item.category === categoryFilter.value)));
+const totalWeight = computed(() => (version.value?.indicators || []).reduce((total, item) => total + Number(item.weight || 0), 0));
 const { kpi_indicator_category, kpi_indicator_type, kpi_measurement_unit, kpi_scoring_method } = toRefs<any>(useDict('kpi_indicator_category', 'kpi_indicator_type', 'kpi_measurement_unit', 'kpi_scoring_method'));
 
 async function load() {
   try {
     versions.value = (await listIndicatorVersions()).data || [];
     if (versions.value.length && !versions.value.some(item => item.version === selectedVersion.value)) selectedVersion.value = versions.value[0].version;
-    await selectVersion(selectedVersion.value);
-  } catch { version.value = undefined; }
+    if (versions.value.length) await selectVersion(detailMode.value && typeof route.query.version === 'string' ? route.query.version : selectedVersion.value);
+    else { version.value = undefined; references.value = []; audits.value = []; }
+  } catch (error) { version.value = undefined; ElMessage.error(error instanceof Error ? error.message : '无法读取指标版本'); }
 }
-async function selectVersion(code: string) { selectedVersion.value = code; const summary = versions.value.find(item => item.version === code); references.value = (await listIndicatorReferences(code)).data || []; audits.value = (await listIndicatorAudit(code)).data || []; version.value = summary?.status === 'PUBLISHED' ? (await getIndicatorVersion(code)).data : { version: code, formulaVersion: summary?.formulaVersion || 'weighted-score-v1', scoreScale: summary?.scoreScale || 4, indicators: (await getIndicatorVersionItems(code)).data || [] }; }
+async function selectVersion(code: string) { const summary = versions.value.find(item => item.version === code); if (!summary) return; selectedVersion.value = code; try { references.value = (await listIndicatorReferences(code)).data || []; audits.value = (await listIndicatorAudit(code)).data || []; version.value = summary.status === 'PUBLISHED' ? (await getIndicatorVersion(code)).data : { version: code, formulaVersion: summary.formulaVersion || 'weighted-score-v1', scoreScale: summary.scoreScale || 4, indicators: (await getIndicatorVersionItems(code)).data || [] }; } catch (error) { version.value = undefined; ElMessage.error(error instanceof Error ? error.message : '无法读取指标版本'); } }
+function openDetail(code: string) { router.push({ path: '/performance/indicators/detail', query: { version: code } }); }
 function showDetail(item: IndicatorVersionInput['indicators'][number]) { detailItem.value = item; detailVisible.value = true; }
 function moveIndicator(item: IndicatorVersionInput['indicators'][number], delta: number) { if (!version.value || selectedSummary.value?.status !== 'DRAFT') return; const index = version.value.indicators.indexOf(item); const target = index + delta; if (target < 0 || target >= version.value.indicators.length) return; const rows = version.value.indicators; [rows[index], rows[target]] = [rows[target], rows[index]]; version.value = { ...version.value, indicators: [...rows] }; }
-function openCreate() { form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = [{ code: '', name: '', weight: 0, maximumScore: 100, category: '综合管理', indicatorType: '定量', measurementUnit: '分', scoringMethod: '加权评分', evidenceRequired: false, description: '' }]; dialogVisible.value = true; }
-function openEdit() { if (!version.value) return; form.version = version.value.version; form.formulaVersion = version.value.formulaVersion; form.scoreScale = version.value.scoreScale; form.indicators = version.value.indicators.map(item => ({ ...item })); dialogVisible.value = true; }
+function openCreate() { editing.value = false; createStep.value = 1; form.version = ''; form.formulaVersion = 'weighted-score-v1'; form.scoreScale = 4; form.indicators = []; dialogVisible.value = true; }
+function openEdit() { if (!version.value) return; editing.value = true; createStep.value = 2; form.version = version.value.version; form.formulaVersion = version.value.formulaVersion; form.scoreScale = version.value.scoreScale; form.indicators = version.value.indicators.map(item => ({ ...item })); dialogVisible.value = true; }
+async function proceedCreate() { if (!form.version.trim() || !form.formulaVersion.trim()) { ElMessage.warning('请先填写版本编码和评分公式'); return; } saving.value = true; try { await saveIndicatorDraft(form); ElMessage.success('指标版本基本信息已保存'); dialogVisible.value = false; await load(); router.push({ path: '/performance/indicators/detail', query: { version: form.version } }); } finally { saving.value = false; } }
+function openIndicatorEditor(index = -1) { const code = index >= 0 ? form.indicators[index]?.code : ''; router.push({ path: '/performance/indicators/editor', query: { version: form.version || version.value?.version, mode: index >= 0 ? 'edit' : 'create', indicator: code } }); }
+function openIndicatorEditorByCode(code: string) { router.push({ path: '/performance/indicators/editor', query: { version: version.value?.version || form.version, mode: 'edit', indicator: code } }); }
+async function removeDetailIndicator(item: IndicatorVersionInput['indicators'][number]) { if (!version.value) return; await ElMessageBox.confirm(`确定删除指标“${item.name}”吗？`, '删除确认'); await deleteIndicatorItem(version.value.version,item.code); ElMessage.success('指标已删除'); await selectVersion(version.value.version); }
+function saveIndicatorEditor() { if (!indicatorForm.code.trim() || !indicatorForm.name.trim() || indicatorForm.weight <= 0 || indicatorForm.maximumScore <= 0) { ElMessage.warning('请完整填写指标属性'); return; } const duplicate = form.indicators.some((item, index) => index !== editingIndicatorIndex.value && item.code.trim() === indicatorForm.code.trim()); if (duplicate) { ElMessage.warning('指标编码不能重复'); return; } const item = { ...indicatorForm }; if (editingIndicatorIndex.value >= 0) form.indicators[editingIndicatorIndex.value] = item; else form.indicators.push(item); indicatorEditorVisible.value = false; }
 async function saveDraft() {
-  if (!form.version || !form.indicators.length || form.indicators.some(item => !item.code || !item.name || item.weight <= 0)) { ElMessage.warning('请完整填写版本和指标项'); return; }
+  const codes = form.indicators.map(item => item.code.trim());
+  if (!form.version.trim() || form.indicators.some(item => !item.code.trim() || !item.name.trim() || item.weight <= 0 || item.maximumScore <= 0)) { ElMessage.warning('请完整填写版本和指标项'); return; }
+  if (new Set(codes).size !== codes.length) { ElMessage.warning('指标编码不能重复'); return; }
   saving.value = true;
   try { await saveIndicatorDraft(form); ElMessage.success('指标草稿已保存'); dialogVisible.value = false; await load(); } finally { saving.value = false; }
 }
 async function publishDraftVersion() { await publishIndicatorDraft(selectedVersion.value); ElMessage.success('指标版本发布成功'); await load(); }
-async function removeDraft() { await deleteIndicatorDraft(selectedVersion.value); ElMessage.success('指标草稿已删除'); await load(); }
+async function removeDraft() { const refs = (await listIndicatorReferences(selectedVersion.value)).data || []; if (refs.length) { const details = refs.map((item: any) => `${item.type === 'PERFORMANCE_SCHEME' ? '考核方案' : '考核周期'}：${item.code}`).join('、'); ElMessage.warning(`该版本已关联业务，不能删除。关联对象：${details}`); return; } try { await deleteIndicatorDraft(selectedVersion.value); ElMessage.success('指标草稿已删除'); await load(); } catch (error: any) { ElMessage.error(error?.message || '指标版本删除失败，请检查是否已被方案、周期或填报引用'); } }
+async function removeDraftFor(code: string) { selectedVersion.value = code; await ElMessageBox.confirm(`确定删除草稿版本“${code}”吗？`, '删除确认'); await removeDraft(); }
 async function archiveVersion() { await ElMessageBox.confirm('归档后不能再被新方案引用，是否继续？', '归档确认'); await archiveIndicatorVersion(selectedVersion.value); ElMessage.success('版本已归档'); await load(); }
+async function withdrawVersion() { const refs = (await listIndicatorReferences(selectedVersion.value)).data || []; const schemes = refs.filter((item: any) => item.type === 'PERFORMANCE_SCHEME'); if (schemes.length) { ElMessage.warning(`当前版本已被考核方案引用，不能撤回。请先解除方案引用：${schemes.map((item: any) => item.code).join('、')}`); return; } await ElMessageBox.confirm('撤回后版本恢复为草稿状态，是否继续？', '撤回确认'); try { await withdrawIndicatorVersion(selectedVersion.value); ElMessage.success('版本已撤回'); await load(); } catch (error: any) { ElMessage.error(error?.message || '版本撤回失败，请先解除业务引用'); } }
 function exportCsv() { const header='编码,名称,分类,性质,单位,权重,满分,评分方式,需要材料,说明'; const rows=(form.indicators || []).map(item => [item.code,item.name,item.category,item.indicatorType,item.measurementUnit,item.weight,item.maximumScore,item.scoringMethod,item.evidenceRequired ? '是' : '否',item.description].map(value => `"${String(value ?? '').replace(/"/g,'""')}"`).join(',')); const blob=new Blob(['\ufeff'+[header,...rows].join('\n')], { type:'text/csv;charset=utf-8' }); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=`${form.version || 'indicators'}.csv`; link.click(); URL.revokeObjectURL(url); }
-function importCsv(event: Event) { const input=event.target as HTMLInputElement; const file=input.files?.[0]; if(!file)return; const reader=new FileReader(); reader.onload=() => { const lines=String(reader.result || '').split(/\r?\n/).slice(1).filter(Boolean); form.indicators=lines.map(line => { const cells=line.split(',').map(cell => cell.replace(/^"|"$/g,'').replace(/""/g,'"')); return { code:cells[0] || '', name:cells[1] || '', category:cells[2] || '综合管理', indicatorType:cells[3] || '定量', measurementUnit:cells[4] || '分', weight:Number(cells[5] || 0), maximumScore:Number(cells[6] || 100), scoringMethod:cells[7] || '加权评分', evidenceRequired:cells[8] === '是', description:cells[9] || '' }; }); ElMessage.success(`已导入 ${form.indicators.length} 条指标`); input.value=''; }; reader.readAsText(file,'UTF-8'); }
+function downloadTemplate() { const header='编码,名称,分类,性质,单位,权重,满分,评分方式,需要材料,说明'; const example='goal,年度目标完成,综合管理,定量,分,30,100,加权评分,是,请填写指标说明'; const blob=new Blob(['\ufeff'+header+'\n'+example+'\n'], { type:'text/csv;charset=utf-8' }); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='指标导入模板.csv'; link.click(); URL.revokeObjectURL(url); }
+function exportDetailCsv() { if (!version.value) return; const previous = form.indicators; form.indicators = version.value.indicators.map(item => ({ ...item })); exportCsv(); form.indicators = previous; }
+function prepareDetailImport() { if (!version.value || selectedSummary.value?.status !== 'DRAFT') { ElMessage.warning('只有草稿版本可以导入指标'); return; } form.version = version.value.version; form.formulaVersion = version.value.formulaVersion; form.scoreScale = version.value.scoreScale; form.indicators = version.value.indicators.map(item => ({ ...item })); fileInput.value?.click(); }
+function importCsv(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = async () => { const lines = String(reader.result || '').split(/\r?\n/).slice(1).filter(Boolean); form.indicators = lines.map(line => { const cells = line.split(',').map(cell => cell.replace(/^"|"$/g, '').replace(/""/g, '"')); return { code: cells[0] || '', name: cells[1] || '', category: cells[2] || '综合管理', indicatorType: cells[3] || '定量', measurementUnit: cells[4] || '分', weight: Number(cells[5] || 0), maximumScore: Number(cells[6] || 100), scoringMethod: cells[7] || '加权评分', evidenceRequired: cells[8] === '是', description: cells[9] || '' }; }); if (detailMode.value && version.value && selectedSummary.value?.status === 'DRAFT') { await saveIndicatorDraft({ version: version.value.version, formulaVersion: version.value.formulaVersion, scoreScale: version.value.scoreScale, indicators: form.indicators }); await selectVersion(version.value.version); } ElMessage.success(`已导入 ${form.indicators.length} 条指标`); input.value = ''; }; reader.readAsText(file, 'UTF-8'); }
 async function cloneVersion() { const result = await ElMessageBox.prompt('请输入新版本编码，例如 2026-v2', '复制指标版本', { inputPattern: /^[A-Za-z0-9._-]+$/, inputErrorMessage: '只能包含字母、数字、点、下划线和短横线' }); await cloneIndicatorVersion(selectedVersion.value, result.value); ElMessage.success('已复制为草稿版本'); await load(); selectedVersion.value = result.value; await selectVersion(result.value); }
+async function cloneVersionFor(code: string) { selectedVersion.value = code; await selectVersion(code); await cloneVersion(); }
 async function runCompare() { if (!compareFrom.value || !compareTo.value || compareFrom.value === compareTo.value) { ElMessage.warning('请选择两个不同版本'); return; } changes.value = (await compareIndicatorVersions(compareFrom.value, compareTo.value)).data || []; }
 onMounted(load);
 </script>
 
 <style scoped>
-.toolbar{display:flex;align-items:center;justify-content:space-between;font-size:18px;font-weight:600}.version-tabs{margin-top:16px}.version-actions{margin-top:16px}.filters{display:flex;gap:12px;margin-top:16px}.filters .el-input{width:260px}.filters .el-select{width:180px}.mt-4{margin-top:16px}.items{width:100%;overflow:auto}.item-row{display:grid;grid-template-columns:120px 160px 120px 100px 90px 100px 100px 130px 80px auto;gap:8px;margin-bottom:8px;min-width:1100px}
+.indicator-page{color:var(--el-text-color-primary)}.indicator-page :deep(.el-card){border:1px solid var(--el-border-color-lighter);border-radius:12px;box-shadow:0 1px 3px rgb(0 0 0 / 4%)}.toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}.toolbar span{display:block;font-size:20px;font-weight:600;letter-spacing:.2px}.toolbar p{margin:7px 0 0;color:var(--el-text-color-secondary);font-size:13px;font-weight:400}.eyebrow{margin-bottom:8px;color:var(--el-color-primary);font-size:11px;font-weight:700;letter-spacing:1.6px}.toolbar-actions,.version-actions{display:flex;gap:8px;align-items:center}.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}.summary-card{padding:16px 18px;border:1px solid var(--el-border-color-lighter);border-radius:10px;background:var(--el-bg-color)}.summary-card span,.summary-card small{display:block;color:var(--el-text-color-secondary);font-size:12px}.summary-card strong{display:block;margin:8px 0 4px;color:var(--el-text-color-primary);font-size:22px;font-weight:600}.summary-card strong.weight-invalid{color:var(--el-color-danger)}.version-table,.editor-indicator-table{border-radius:8px;overflow:hidden}.indicator-page :deep(.el-table th){background:#f5f7fa;color:var(--el-text-color-regular);font-weight:600}.version-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:4px 0}.version-header strong{font-size:20px;font-weight:600}.version-header p{margin:8px 0 0;color:var(--el-text-color-secondary);font-size:13px}.filters{display:flex;gap:12px;margin-top:16px}.filters .el-input{width:260px}.filters .el-select{width:180px}.mt-2{margin-left:8px}.mt-4{margin-top:16px}.items{width:100%;padding:4px 0}.indicator-section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;padding:12px 14px;border:1px solid var(--el-border-color-lighter);border-radius:8px;background:#f5f7fa}.indicator-section-head strong{display:block;color:var(--el-text-color-primary);font-size:14px}.indicator-section-head span{display:block;margin-top:4px;color:var(--el-text-color-secondary);font-size:12px}.item-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px;padding:16px;border:1px solid var(--el-border-color-lighter);border-radius:10px;background:#f8fafc}.item-row :deep(.el-input),.item-row :deep(.el-select),.item-row :deep(.el-input-number){width:100%}.item-row :deep(.el-checkbox){align-self:center}.indicator-tools{display:flex;gap:8px;margin-top:4px}.editor-indicator-table{width:100%;margin-bottom:12px}.indicator-editor-form :deep(.el-select),.indicator-editor-form :deep(.el-input-number){width:100%}.create-steps{margin:0 8px 24px}.indicator-page:not(.detail-page) .version-table ~ *{display:none}@media (max-width: 760px){.toolbar{flex-direction:column}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.item-row{grid-template-columns:repeat(2,minmax(0,1fr))}.filters{flex-direction:column}.filters .el-input,.filters .el-select{width:100%}.indicator-section-head{align-items:flex-start;flex-direction:column}}
 </style>

@@ -22,6 +22,11 @@ services:
       - ../backend/kpi-storage/migrations/V5__approval_task.sql:/docker-entrypoint-initdb.d/60_kpi_approval_task.sql:ro
       - ../backend/kpi-storage/migrations/V6__pending_review_uniqueness.sql:/docker-entrypoint-initdb.d/70_kpi_pending_review.sql:ro
       - ../backend/kpi-storage/migrations/V7__workflow_projection.sql:/docker-entrypoint-initdb.d/80_kpi_workflow_projection.sql:ro
+      - ../backend/kpi-storage/migrations/V8__performance_scheme.sql:/docker-entrypoint-initdb.d/90_kpi_performance_scheme.sql:ro
+      - ../backend/kpi-storage/migrations/V9__cycle_scheme_binding.sql:/docker-entrypoint-initdb.d/100_kpi_cycle_scheme_binding.sql:ro
+      - ../backend/kpi-storage/migrations/V10__performance_scheme_indicator_version.sql:/docker-entrypoint-initdb.d/110_kpi_scheme_indicator_version.sql:ro
+      - ../backend/kpi-storage/migrations/V11__indicator_attributes.sql:/docker-entrypoint-initdb.d/120_kpi_indicator_attributes.sql:ro
+      - ../backend/kpi-storage/migrations/V12__indicator_system.sql:/docker-entrypoint-initdb.d/130_kpi_indicator_system.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD']
       interval: 10s

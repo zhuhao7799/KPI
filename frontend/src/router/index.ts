@@ -86,6 +86,24 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: { title: '指标体系管理', icon: 'list' }
       },
       {
+        path: '/performance/indicators/detail',
+        component: () => import('@/views/performance/indicators/index.vue'),
+        name: 'PerformanceIndicatorDetail',
+        meta: { title: '指标版本明细', activeMenu: '/performance/indicators', hidden: true }
+      },
+      {
+        path: '/performance/indicators/editor',
+        component: () => import('@/views/performance/indicators/indicator-editor.vue'),
+        name: 'PerformanceIndicatorEditor',
+        meta: { title: '指标编辑', activeMenu: '/performance/indicators', hidden: true }
+      },
+      {
+        path: '/performance/indicators/editor',
+        component: () => import('@/views/performance/indicators/indicator-editor.vue'),
+        name: 'PerformanceIndicatorEditor',
+        meta: { title: '指标编辑', activeMenu: '/performance/indicators', hidden: true }
+      },
+      {
         path: '/performance/cycles',
         component: () => import('@/views/performance/cycles/index.vue'),
         name: 'PerformanceCycles',

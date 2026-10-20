@@ -92,7 +92,7 @@ public final class JdbcPerformanceSchemeRepository {
 
     public void deleteIndicator(String schemeCode, String indicatorCode) {
         var sql = "delete i from performance_scheme_indicator i join performance_scheme s on s.id=i.scheme_id where s.scheme_code=? and s.status='DRAFT' and i.indicator_code=?";
-        try (var c = dataSource.getConnection(); var s = c.prepareStatement(sql)) { s.setString(1, schemeCode); s.setString(2, indicatorCode); if (s.executeUpdate() == 0) throw new IllegalStateException("draft indicator not found"); }
+        try (var c = dataSource.getConnection(); var s = c.prepareStatement(sql)) { s.setString(1, schemeCode); s.setString(2, indicatorCode); if (s.executeUpdate() == 0) throw new IllegalStateException("方案未处于草稿状态，或指标不存在；已发布方案请先复制为草稿后再删除指标"); }
         catch (SQLException e) { throw new IllegalStateException("cannot delete scheme indicator", e); }
     }
 

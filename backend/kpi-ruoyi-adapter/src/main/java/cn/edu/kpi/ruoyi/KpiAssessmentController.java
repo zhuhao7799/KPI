@@ -27,6 +27,7 @@ import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceLookup;
 import cn.edu.kpi.infrastructure.jdbc.JdbcEvidenceRepository;
 import cn.edu.kpi.application.assessment.AssessmentSnapshotReader;
 import org.dromara.common.core.domain.R;
+import org.dromara.common.core.exception.ServiceException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ContentDisposition;
@@ -162,26 +163,42 @@ public final class KpiAssessmentController {
     @GetMapping("/indicator-versions/{version}/items")
     public R<List<IndicatorVersion.Indicator>> indicatorVersionItems(@PathVariable String version) { current.requireCurrent(); return R.ok(indicatorRepository.items(version)); }
 
+    @PostMapping("/indicator-versions/{version}/items")
+    public R<Void> addIndicatorItem(@PathVariable String version, @RequestBody IndicatorVersion.Indicator item) { try { indicatorRepository.addItem(version,item); return R.ok(); } catch (IllegalArgumentException e) { throw new ServiceException("KPI_ITEM_VALIDATION: " + e.getMessage(),422); } catch (IllegalStateException e) { throw new ServiceException("KPI_ITEM_CONSISTENCY: " + e.getMessage(),409); } }
+    @PutMapping("/indicator-versions/{version}/items/{code}")
+    public R<Void> updateIndicatorItem(@PathVariable String version,@PathVariable String code,@RequestBody IndicatorVersion.Indicator item) { try { indicatorRepository.updateItem(version,code,item); return R.ok(); } catch (IllegalArgumentException e) { throw new ServiceException("KPI_ITEM_VALIDATION: " + e.getMessage(),422); } catch (IllegalStateException e) { throw new ServiceException("KPI_ITEM_CONSISTENCY: " + e.getMessage(),409); } }
+    @DeleteMapping("/indicator-versions/{version}/items/{code}")
+    public R<Void> deleteIndicatorItem(@PathVariable String version,@PathVariable String code) { try { indicatorRepository.deleteItem(version,code); return R.ok(); } catch (IllegalArgumentException e) { throw new ServiceException("KPI_ITEM_VALIDATION: " + e.getMessage(),422); } catch (IllegalStateException e) { throw new ServiceException("KPI_ITEM_CONSISTENCY: " + e.getMessage(),409); } }
+
     @GetMapping("/indicator-versions")
     public R<List<JdbcIndicatorVersionRepository.VersionSummary>> indicatorVersions() {
         current.requireCurrent();
         return R.ok(indicatorRepository.listVersions());
     }
 
+    @GetMapping("/indicator-systems")
+    public R<List<JdbcIndicatorVersionRepository.IndicatorSystem>> indicatorSystems() { current.requireCurrent(); return R.ok(indicatorRepository.listSystems()); }
+    @PostMapping("/indicator-systems")
+    public R<Void> saveIndicatorSystem(@RequestBody JdbcIndicatorVersionRepository.IndicatorSystem input) { current.requireCurrent(); indicatorRepository.saveSystem(input); return R.ok(); }
+    @DeleteMapping("/indicator-systems/{code}")
+    public R<Void> deleteIndicatorSystem(@PathVariable String code) { try { current.requireCurrent(); indicatorRepository.deleteSystem(code); return R.ok(); } catch (IllegalStateException e) { throw new ServiceException("KPI_SYSTEM_DELETE_BLOCKED: " + e.getMessage(),409); } }
+
     @PostMapping("/indicator-versions/draft")
-    public R<Void> saveIndicatorDraft(@RequestBody IndicatorVersionInput input) { var actor=current.requireCurrent(); indicatorRepository.saveDraft(new IndicatorVersion(input.version(), input.indicators()), input.formulaVersion(), input.scoreScale()); indicatorRepository.audit("DRAFT_SAVE", input.version(), actor.userId(), "{\"indicatorCount\":" + input.indicators().size() + "}"); return R.ok(); }
+    public R<Void> saveIndicatorDraft(@RequestBody IndicatorVersionInput input) { try { var actor=current.requireCurrent(); indicatorRepository.saveDraft(new IndicatorVersion(input.version(), input.indicators()), input.formulaVersion(), input.scoreScale()); indicatorRepository.audit("DRAFT_SAVE", input.version(), actor.userId(), "{\"indicatorCount\":" + input.indicators().size() + "}"); return R.ok(); } catch (IllegalArgumentException e) { throw new ServiceException("KPI_VERSION_VALIDATION: " + e.getMessage(), 422); } catch (IllegalStateException e) { throw new ServiceException("KPI_VERSION_CONSISTENCY: " + e.getMessage(), 409); } }
 
     @DeleteMapping("/indicator-versions/{version}/draft")
-    public R<Void> deleteIndicatorDraft(@PathVariable String version) { var actor=current.requireCurrent(); indicatorRepository.deleteDraft(version); indicatorRepository.audit("DRAFT_DELETE", version, actor.userId(), "{}"); return R.ok(); }
+    public R<Void> deleteIndicatorDraft(@PathVariable String version) { try { var actor=current.requireCurrent(); indicatorRepository.deleteDraft(version); indicatorRepository.audit("DRAFT_DELETE", version, actor.userId(), "{}"); return R.ok(); } catch (IllegalStateException e) { throw new ServiceException("KPI_VERSION_DELETE_BLOCKED: " + e.getMessage(), 409); } }
 
     @PostMapping("/indicator-versions/{version}/publish")
-    public R<Void> publishIndicatorDraft(@PathVariable String version) { var actor=current.requireCurrent(); indicatorRepository.publishDraft(version, java.time.Instant.now()); indicatorRepository.audit("PUBLISH", version, actor.userId(), "{}"); return R.ok(); }
+    public R<Void> publishIndicatorDraft(@PathVariable String version) { try { var actor=current.requireCurrent(); indicatorRepository.publishDraft(version, java.time.Instant.now()); indicatorRepository.audit("PUBLISH", version, actor.userId(), "{}"); return R.ok(); } catch (IllegalStateException e) { throw new ServiceException("KPI_VERSION_PUBLISH_BLOCKED: " + e.getMessage(), 409); } }
 
     @PostMapping("/indicator-versions/{version}/clone")
     public R<Void> cloneIndicatorVersion(@PathVariable String version, @RequestParam String targetVersion) { var actor=current.requireCurrent(); indicatorRepository.clonePublished(version, targetVersion); indicatorRepository.audit("CLONE", targetVersion, actor.userId(), "{\"source\":\"" + version + "\"}"); return R.ok(); }
 
     @PostMapping("/indicator-versions/{version}/archive")
     public R<Void> archiveIndicatorVersion(@PathVariable String version) { var actor=current.requireCurrent(); indicatorRepository.archive(version); indicatorRepository.audit("ARCHIVE", version, actor.userId(), "{}"); return R.ok(); }
+    @PostMapping("/indicator-versions/{version}/withdraw")
+    public R<Void> withdrawIndicatorVersion(@PathVariable String version) { try { var actor=current.requireCurrent(); indicatorRepository.withdraw(version); indicatorRepository.audit("WITHDRAW", version, actor.userId(), "{}"); return R.ok(); } catch (IllegalArgumentException e) { throw new ServiceException("KPI_VERSION_VALIDATION: " + e.getMessage(),422); } catch (IllegalStateException e) { throw new ServiceException("KPI_VERSION_WITHDRAW_BLOCKED: " + e.getMessage(),409); } }
 
     @GetMapping("/indicator-versions/{version}/references")
     public R<List<JdbcIndicatorVersionRepository.Reference>> indicatorVersionReferences(@PathVariable String version) { current.requireCurrent(); return R.ok(indicatorRepository.references(version)); }
